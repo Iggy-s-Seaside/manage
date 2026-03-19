@@ -8,6 +8,7 @@ interface CanvasProps {
   onSelectLayer: (id: string | null) => void;
   onUpdateLayer: (id: string, changes: Partial<TextLayer>) => void;
   zoomOverride?: number;  // Manual zoom override (0.25 to 2)
+  onLayerTapped?: (layer: TextLayer) => void; // Called when a layer is tapped on mobile
 }
 
 export interface CanvasHandle {
@@ -15,7 +16,7 @@ export interface CanvasHandle {
   getScale: () => number;
 }
 
-export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLayer, onUpdateLayer, zoomOverride }, ref) => {
+export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLayer, onUpdateLayer, zoomOverride, onLayerTapped }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -505,7 +506,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
   const handleDblClick = useCallback((e: React.MouseEvent) => {
     const hit = hitTest(e.clientX, e.clientY);
     if (!hit || !containerRef.current || hit.locked) return;
+    openInlineEditor(hit);
+  }, [hitTest, scale, onSelectLayer, onUpdateLayer]);
 
+  // Shared inline editor for both mouse double-click and touch double-tap
+  const openInlineEditor = useCallback((hit: TextLayer) => {
+    if (!containerRef.current) return;
     setEditing(hit.id);
     onSelectLayer(hit.id);
 
@@ -548,7 +554,84 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
       if (ev.key === 'Escape') textarea.blur();
       if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); textarea.blur(); }
     });
-  }, [hitTest, scale, onSelectLayer, onUpdateLayer]);
+  }, [scale, onSelectLayer, onUpdateLayer]);
+
+  // --- Touch event handlers for mobile layer interaction ---
+  const touchDragRef = useRef<{ id: string; offsetX: number; offsetY: number; moved: boolean } | null>(null);
+  const lastTapRef = useRef<{ time: number; layerId: string | null }>({ time: 0, layerId: null });
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Only handle single-finger touches (let pinch-zoom pass through)
+    if (e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const hit = hitTest(touch.clientX, touch.clientY);
+
+    if (hit) {
+      // Stop the event from reaching useTouchCanvas so it doesn't interfere
+      e.stopPropagation();
+      onSelectLayer(hit.id);
+      onLayerTapped?.(hit);
+
+      if (!hit.locked) {
+        const rect = canvasRef.current!.getBoundingClientRect();
+        const x = (touch.clientX - rect.left) / scale;
+        const y = (touch.clientY - rect.top) / scale;
+        touchDragRef.current = { id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y, moved: false };
+      }
+    } else {
+      onSelectLayer(null);
+    }
+  }, [hitTest, onSelectLayer, onLayerTapped, scale]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1 || !touchDragRef.current) return;
+
+    // Prevent scroll while dragging a layer
+    e.preventDefault();
+    e.stopPropagation();
+    touchDragRef.current.moved = true;
+
+    const touch = e.touches[0];
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) / scale;
+    const y = (touch.clientY - rect.top) / scale;
+    const newX = Math.round(x - touchDragRef.current.offsetX);
+    const newY = Math.round(y - touchDragRef.current.offsetY);
+
+    const layer = state.layers.find(l => l.id === touchDragRef.current!.id);
+    if (layer) {
+      const snaps = calcSnapLines(touchDragRef.current.id, newX, newY, layer.width, layer.fontSize);
+      setSnapLines(snaps);
+    }
+
+    onUpdateLayer(touchDragRef.current.id, { x: newX, y: newY });
+  }, [scale, onUpdateLayer, state.layers, calcSnapLines]);
+
+  const handleTouchEnd = useCallback((_e: React.TouchEvent) => {
+    const dragInfo = touchDragRef.current;
+    touchDragRef.current = null;
+    setSnapLines({ x: [], y: [] });
+
+    if (!dragInfo || dragInfo.moved) return;
+
+    // Detect double-tap on a layer for inline editing
+    const now = Date.now();
+    const layerId = dragInfo.id;
+    if (lastTapRef.current.layerId === layerId && now - lastTapRef.current.time < 400) {
+      // Double-tap detected
+      const layer = state.layers.find(l => l.id === layerId);
+      if (layer && !layer.locked) {
+        openInlineEditor(layer);
+      }
+      lastTapRef.current = { time: 0, layerId: null };
+    } else {
+      lastTapRef.current = { time: now, layerId };
+      // Show edit hint on single tap
+      setShowEditHint(true);
+      setTimeout(() => setShowEditHint(false), 2000);
+    }
+  }, [state.layers, openInlineEditor]);
 
   return (
     <div ref={containerRef} className="relative flex justify-center items-start w-full h-full">
@@ -578,12 +661,16 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
           borderRadius: '8px',
           cursor: dragging ? 'grabbing' : 'default',
+          touchAction: 'none', // Prevent browser gestures on the canvas
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => { handleMouseUp(); setHoveredLayerId(null); }}
         onDoubleClick={handleDblClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       />
 
       {/* Edit hint tooltip */}
@@ -598,7 +685,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
           }}
         >
           <div className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm whitespace-nowrap">
-            Double-click to edit text
+            Tap again to edit text
           </div>
         </div>
       )}

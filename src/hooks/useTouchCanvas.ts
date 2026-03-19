@@ -32,11 +32,12 @@ export function useTouchCanvas() {
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
       // Pinch start
+      e.preventDefault(); // Prevent browser zoom
       touchRef.current.initialDistance = getTouchDistance(e.touches);
       touchRef.current.initialScale = transform.scale;
       touchRef.current.lastTouchCount = 2;
     } else if (e.touches.length === 1 && transform.scale > 1) {
-      // Pan start (only when zoomed in)
+      // Pan start (only when zoomed in, and only if event wasn't stopped by canvas layer handler)
       touchRef.current.panStartX = e.touches[0].clientX;
       touchRef.current.panStartY = e.touches[0].clientY;
       touchRef.current.initialOffsetX = transform.offsetX;

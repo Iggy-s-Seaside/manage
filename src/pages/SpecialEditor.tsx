@@ -446,6 +446,12 @@ export function SpecialEditor() {
               onSelectLayer={(id) => dispatch({ type: 'SELECT_LAYER', id })}
               onUpdateLayer={(id, changes) => dispatch({ type: 'UPDATE_LAYER', id, changes })}
               zoomOverride={zoom}
+              onLayerTapped={() => {
+                // On mobile, open properties when tapping a layer for easy editing
+                if (window.innerWidth < 768 && mobileSheet !== 'properties') {
+                  setMobileSheet('properties');
+                }
+              }}
             />
           </div>
         </div>
@@ -505,7 +511,11 @@ export function SpecialEditor() {
 
       {/* Mobile Toolbar — fixed at bottom */}
       <MobileToolbar
-        onAddText={(overrides) => addTextLayer(overrides)}
+        onAddText={(overrides) => {
+          addTextLayer(overrides);
+          // Auto-open properties on mobile so user can immediately edit text/font
+          setMobileSheet('properties');
+        }}
         onOpenLibrary={() => setLibraryOpen(true)}
         onUpload={() => bgInputRef.current?.click()}
         onOpenLayers={() => setMobileSheet('layers')}

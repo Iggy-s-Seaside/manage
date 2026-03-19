@@ -163,11 +163,32 @@ export function useEditorState() {
   const selectedLayer = state.layers.find((l) => l.id === state.selectedLayerId) ?? null;
 
   const addTextLayer = useCallback((overrides?: Partial<TextLayer>) => {
+    // Calculate base position, then offset if there's already a layer near that spot
+    let baseX = state.canvasWidth / 2 - 150;
+    let baseY = state.canvasHeight / 2 - 30;
+
+    // Check if any existing layer is near this position and offset to avoid stacking
+    const OVERLAP_THRESHOLD = 30;
+    let attempts = 0;
+    while (attempts < 10) {
+      const overlapping = state.layers.some(l =>
+        Math.abs(l.x - baseX) < OVERLAP_THRESHOLD && Math.abs(l.y - baseY) < OVERLAP_THRESHOLD
+      );
+      if (!overlapping) break;
+      baseX += 40;
+      baseY += 50;
+      attempts++;
+    }
+
+    // Clamp within canvas bounds
+    baseX = Math.max(0, Math.min(baseX, state.canvasWidth - 300));
+    baseY = Math.max(0, Math.min(baseY, state.canvasHeight - 60));
+
     const layer: TextLayer = {
       id: crypto.randomUUID(),
       text: 'New Text',
-      x: state.canvasWidth / 2 - 150,
-      y: state.canvasHeight / 2 - 30,
+      x: baseX,
+      y: baseY,
       width: 300,
       fontFamily: 'Inter',
       fontSize: 48,
@@ -189,7 +210,7 @@ export function useEditorState() {
       ...overrides,
     };
     dispatch({ type: 'ADD_LAYER', layer });
-  }, [state.canvasWidth, state.canvasHeight]);
+  }, [state.canvasWidth, state.canvasHeight, state.layers]);
 
   return {
     state,
