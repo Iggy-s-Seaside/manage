@@ -3,6 +3,34 @@ import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { EditorState, TextLayer } from '../../types';
 
+/**
+ * Draw an image onto a canvas using "cover" behaviour:
+ * scale to fill while maintaining aspect ratio, then center-crop.
+ */
+function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  canvasW: number,
+  canvasH: number,
+) {
+  const imgRatio = img.naturalWidth / img.naturalHeight;
+  const canvasRatio = canvasW / canvasH;
+
+  let srcX = 0, srcY = 0, srcW = img.naturalWidth, srcH = img.naturalHeight;
+
+  if (imgRatio > canvasRatio) {
+    // Image is wider than canvas — crop sides
+    srcW = img.naturalHeight * canvasRatio;
+    srcX = (img.naturalWidth - srcW) / 2;
+  } else {
+    // Image is taller than canvas — crop top/bottom
+    srcH = img.naturalWidth / canvasRatio;
+    srcY = (img.naturalHeight - srcH) / 2;
+  }
+
+  ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvasW, canvasH);
+}
+
 interface CanvasProps {
   state: EditorState;
   onSelectLayer: (id: string | null) => void;
@@ -190,7 +218,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
       ctx.save();
       const filterStr = buildFilterString(state.imageFilters);
       if (filterStr !== 'none') ctx.filter = filterStr;
-      ctx.drawImage(bgImage, 0, 0, state.canvasWidth, state.canvasHeight);
+      drawImageCover(ctx, bgImage, state.canvasWidth, state.canvasHeight);
       ctx.filter = 'none';
       ctx.restore();
 
@@ -393,7 +421,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
         // Draw the image (may taint the canvas, but try)
         const filterStr = buildFilterString(state.imageFilters);
         if (filterStr !== 'none') ctx.filter = filterStr;
-        ctx.drawImage(bgImage, 0, 0, state.canvasWidth, state.canvasHeight);
+        drawImageCover(ctx, bgImage, state.canvasWidth, state.canvasHeight);
         ctx.filter = 'none';
 
         // Overlay
