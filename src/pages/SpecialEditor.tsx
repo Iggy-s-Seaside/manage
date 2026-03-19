@@ -17,7 +17,10 @@ import { useEditorState } from '../hooks/useEditorState';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { useSupabaseCRUD } from '../hooks/useSupabaseCRUD';
 import { useDraftPersistence } from '../hooks/useDraftPersistence';
-import { useTouchCanvas } from '../hooks/useTouchCanvas';
+// useTouchCanvas removed — browser/CSS zoom on the canvas wrapper caused the
+// entire UI to scale and "disappear".  The Canvas component already handles its
+// own internal fit-to-container scaling.  Browser pinch-zoom is blocked via
+// touch-action CSS on the editor container.
 import { TEMPLATES } from '../data/templates';
 import { DEFAULT_IMAGE_FILTERS } from '../types';
 import type { Special, TextLayer } from '../types';
@@ -43,7 +46,7 @@ export function SpecialEditor() {
   const { state, selectedLayer, canUndo, canRedo, dispatch, addTextLayer } = useEditorState();
   const { upload, uploading } = useImageUpload();
   const { data: specials, create, update } = useSupabaseCRUD<Special>('specials');
-  const { containerStyle, handlers: touchHandlers, resetTransform } = useTouchCanvas();
+  // No more CSS-transform zoom wrapper — canvas handles its own scale internally.
 
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -180,7 +183,6 @@ export function SpecialEditor() {
 
   const handleExport = useCallback(() => {
     dispatch({ type: 'SELECT_LAYER', id: null });
-    resetTransform();
     setTimeout(() => {
       const dataUrl = canvasRef.current?.exportImage();
       if (!dataUrl) return;
@@ -190,13 +192,12 @@ export function SpecialEditor() {
       link.click();
       toast.success('Image exported!');
     }, 100);
-  }, [dispatch, resetTransform]);
+  }, [dispatch]);
 
   const handleSave = async () => {
     setSaving(true);
 
     dispatch({ type: 'SELECT_LAYER', id: null });
-    resetTransform();
     await new Promise((r) => setTimeout(r, 150));
 
     const dataUrl = canvasRef.current?.exportImage();
@@ -434,24 +435,22 @@ export function SpecialEditor() {
           />
         </div>
 
-        {/* Canvas Area — with touch gestures on mobile */}
+        {/* Canvas Area — touch-action:manipulation blocks browser pinch-zoom */}
         <div
           className="flex-1 bg-surface-active p-4 pb-24 md:pb-4 overflow-auto flex items-start justify-center"
-          {...touchHandlers}
+          style={{ touchAction: 'manipulation' }}
         >
-          <div style={containerStyle} className="transition-transform duration-75 w-full h-full">
-            <Canvas
-              ref={canvasRef}
-              state={state}
-              onSelectLayer={(id) => dispatch({ type: 'SELECT_LAYER', id })}
-              onUpdateLayer={(id, changes) => dispatch({ type: 'UPDATE_LAYER', id, changes })}
-              zoomOverride={zoom}
-              onLayerTapped={() => {
-                // Don't auto-open properties on tap — let users drag freely.
-                // Properties are auto-opened only when ADDING a new layer from presets.
-              }}
-            />
-          </div>
+          <Canvas
+            ref={canvasRef}
+            state={state}
+            onSelectLayer={(id) => dispatch({ type: 'SELECT_LAYER', id })}
+            onUpdateLayer={(id, changes) => dispatch({ type: 'UPDATE_LAYER', id, changes })}
+            zoomOverride={zoom}
+            onLayerTapped={() => {
+              // Don't auto-open properties on tap — let users drag freely.
+              // Properties are auto-opened only when ADDING a new layer from presets.
+            }}
+          />
         </div>
 
         {/* Right Panel - Properties / Adjustments (desktop only) */}
