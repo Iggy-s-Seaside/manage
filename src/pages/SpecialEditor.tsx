@@ -439,7 +439,7 @@ export function SpecialEditor() {
           className="flex-1 bg-surface-active p-4 pb-24 md:pb-4 overflow-auto flex items-start justify-center"
           {...touchHandlers}
         >
-          <div style={containerStyle} className="transition-transform duration-75">
+          <div style={containerStyle} className="transition-transform duration-75 w-full h-full">
             <Canvas
               ref={canvasRef}
               state={state}
