@@ -131,6 +131,7 @@ export interface TextLayer {
 export interface EditorState {
   backgroundImage: string | null;
   backgroundColor: string;
+  backgroundGradient?: string;  // CSS gradient string, e.g. 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)'
   imageFilters: ImageFilters;
   layers: TextLayer[];
   selectedLayerId: string | null;
@@ -344,3 +345,22 @@ export interface InventoryLog {
 
 export const INVENTORY_UNITS = ['units', 'bottles', 'cases', 'lbs', 'oz', 'kegs', 'bags', 'cans'] as const;
 export const LOG_REASONS = ['restock', 'usage', 'waste', 'count_adjustment'] as const;
+
+// ── Messages / Inbox ──
+
+export interface Message {
+  id: number;
+  created_at: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  status: 'unread' | 'read' | 'replied' | 'archived';
+  replied_at: string | null;
+  reply_text: string | null;
+  replied_by: string | null;
+  notes: string | null;
+}
+
+export const MESSAGE_STATUSES = ['unread', 'read', 'replied', 'archived'] as const;

@@ -7,13 +7,15 @@ interface CanvasProps {
   state: EditorState;
   onSelectLayer: (id: string | null) => void;
   onUpdateLayer: (id: string, changes: Partial<TextLayer>) => void;
+  zoomOverride?: number;  // Manual zoom override (0.25 to 2)
 }
 
 export interface CanvasHandle {
   exportImage: () => string | null;
+  getScale: () => number;
 }
 
-export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLayer, onUpdateLayer }, ref) => {
+export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLayer, onUpdateLayer, zoomOverride }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -22,20 +24,36 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [snapLines, setSnapLines] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
+  const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [showEditHint, setShowEditHint] = useState(false);
 
-  // Scale canvas to fit container
+  // Wait for fonts to load before trusting canvas text metrics
   useEffect(() => {
+    document.fonts.ready.then(() => setFontsLoaded(true));
+  }, []);
+
+  // Scale canvas to fit container (or use manual zoom)
+  useEffect(() => {
+    if (zoomOverride !== undefined) {
+      setScale(zoomOverride);
+      return;
+    }
     const resize = () => {
       if (!containerRef.current) return;
       const containerWidth = containerRef.current.offsetWidth - 32;
       const containerHeight = containerRef.current.offsetHeight - 32;
+      // Guard against 0 or negative container dimensions (before layout settles)
+      if (containerWidth <= 0 || containerHeight <= 0) return;
       const s = Math.min(containerWidth / state.canvasWidth, containerHeight / state.canvasHeight, 1);
-      setScale(s);
+      setScale(Math.max(s, 0.05)); // Never go below 5%
     };
     resize();
+    // Re-calculate after a brief delay so layout has settled
+    const raf = requestAnimationFrame(resize);
     window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, [state.canvasWidth, state.canvasHeight]);
+    return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(raf); };
+  }, [state.canvasWidth, state.canvasHeight, zoomOverride]);
 
   // Load background image — fixed: no crossOrigin for display, proper error handling
   useEffect(() => {
@@ -120,6 +138,34 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
     return parts.length > 0 ? parts.join(' ') : 'none';
   }, []);
 
+  // Parse CSS linear-gradient and render on canvas
+  const renderGradient = useCallback((ctx: CanvasRenderingContext2D, gradientStr: string, w: number, h: number) => {
+    // Parse: linear-gradient(135deg, #color1 0%, #color2 100%)
+    const match = gradientStr.match(/linear-gradient\(\s*([\d.]+)deg\s*,\s*(.+)\)/);
+    if (!match) return;
+    const angle = parseFloat(match[1]);
+    const stops = match[2].split(',').map(s => s.trim());
+
+    // Convert angle to start/end points
+    const rad = (angle - 90) * Math.PI / 180;
+    const cx = w / 2, cy = h / 2;
+    const len = Math.sqrt(w * w + h * h) / 2;
+    const x0 = cx - Math.cos(rad) * len;
+    const y0 = cy - Math.sin(rad) * len;
+    const x1 = cx + Math.cos(rad) * len;
+    const y1 = cy + Math.sin(rad) * len;
+
+    const grad = ctx.createLinearGradient(x0, y0, x1, y1);
+    for (const stop of stops) {
+      const parts = stop.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))\s+([\d.]+)%/);
+      if (parts) {
+        grad.addColorStop(parseFloat(parts[2]) / 100, parts[1]);
+      }
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }, []);
+
   // Render canvas
   const render = useCallback((highlightSelected = true) => {
     const canvas = canvasRef.current;
@@ -132,6 +178,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
     // Background color
     ctx.fillStyle = state.backgroundColor;
     ctx.fillRect(0, 0, state.canvasWidth, state.canvasHeight);
+
+    // Background gradient (templates)
+    if (state.backgroundGradient) {
+      renderGradient(ctx, state.backgroundGradient, state.canvasWidth, state.canvasHeight);
+    }
 
     // Background image with filters
     if (bgImage) {
@@ -158,8 +209,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
       if (!layer.visible) continue;
       ctx.save();
 
+      const lines = layer.text.split('\n');
+      const lineHeight = layer.fontSize * 1.3;
+      const totalTextHeight = lines.length > 1 ? (lines.length - 1) * lineHeight + layer.fontSize : layer.fontSize;
+
       const centerX = layer.x + layer.width / 2;
-      const centerY = layer.y + layer.fontSize / 2;
+      const centerY = layer.y + totalTextHeight / 2;
       ctx.translate(centerX, centerY);
       ctx.rotate((layer.rotation * Math.PI) / 180);
       ctx.translate(-centerX, -centerY);
@@ -188,36 +243,58 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
         ctx.shadowOffsetY = layer.shadowOffsetY;
       }
 
-      // Stroke
-      if (layer.stroke && layer.strokeWidth > 0) {
-        ctx.strokeStyle = layer.stroke;
-        ctx.lineWidth = layer.strokeWidth;
-        ctx.lineJoin = 'round';
-        drawText(ctx, layer.text, textX, layer.y, layer.letterSpacing, true);
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-      }
+      // Draw each line
+      for (let li = 0; li < lines.length; li++) {
+        const lineY = layer.y + li * lineHeight;
+        const lineText = lines[li];
 
-      // Fill
-      ctx.fillStyle = layer.fill;
-      drawText(ctx, layer.text, textX, layer.y, layer.letterSpacing, false);
+        // Stroke
+        if (layer.stroke && layer.strokeWidth > 0) {
+          ctx.strokeStyle = layer.stroke;
+          ctx.lineWidth = layer.strokeWidth;
+          ctx.lineJoin = 'round';
+          drawText(ctx, lineText, textX, lineY, layer.letterSpacing, true);
+          if (li === 0) {
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+          }
+        }
 
-      // Underline
-      if (layer.textDecoration === 'underline') {
-        const metrics = ctx.measureText(layer.text);
-        const uY = layer.y + layer.fontSize + 2;
-        ctx.strokeStyle = layer.fill;
-        ctx.lineWidth = Math.max(1, layer.fontSize / 20);
-        let uX = textX;
-        if (layer.align === 'center') uX = textX - metrics.width / 2;
-        else if (layer.align === 'right') uX = textX - metrics.width;
-        ctx.beginPath();
-        ctx.moveTo(uX, uY);
-        ctx.lineTo(uX + metrics.width, uY);
-        ctx.stroke();
+        // Fill
+        ctx.fillStyle = layer.fill;
+        drawText(ctx, lineText, textX, lineY, layer.letterSpacing, false);
+
+        // Underline
+        if (layer.textDecoration === 'underline') {
+          const metrics = ctx.measureText(lineText);
+          const uY = lineY + layer.fontSize + 2;
+          ctx.strokeStyle = layer.fill;
+          ctx.lineWidth = Math.max(1, layer.fontSize / 20);
+          let uX = textX;
+          if (layer.align === 'center') uX = textX - metrics.width / 2;
+          else if (layer.align === 'right') uX = textX - metrics.width;
+          ctx.beginPath();
+          ctx.moveTo(uX, uY);
+          ctx.lineTo(uX + metrics.width, uY);
+          ctx.stroke();
+        }
       }
 
       ctx.restore();
+
+      // Hover highlight (faint border)
+      if (highlightSelected && layer.id === hoveredLayerId && layer.id !== state.selectedLayerId) {
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate((layer.rotation * Math.PI) / 180);
+        ctx.translate(-centerX, -centerY);
+        ctx.strokeStyle = 'rgba(45, 212, 191, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(layer.x - 4, layer.y - 4, layer.width + 8, totalTextHeight + 12);
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
 
       // Selection box
       if (highlightSelected && layer.id === state.selectedLayerId) {
@@ -228,15 +305,15 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
         ctx.strokeStyle = '#2dd4bf';
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 3]);
-        ctx.strokeRect(layer.x - 4, layer.y - 4, layer.width + 8, layer.fontSize + 12);
+        ctx.strokeRect(layer.x - 4, layer.y - 4, layer.width + 8, totalTextHeight + 12);
         ctx.setLineDash([]);
 
         // Corner handles
         const handles = [
           [layer.x - 4, layer.y - 4],
           [layer.x + layer.width + 4, layer.y - 4],
-          [layer.x - 4, layer.y + layer.fontSize + 8],
-          [layer.x + layer.width + 4, layer.y + layer.fontSize + 8],
+          [layer.x - 4, layer.y + totalTextHeight + 8],
+          [layer.x + layer.width + 4, layer.y + totalTextHeight + 8],
         ];
         for (const [hx, hy] of handles) {
           ctx.fillStyle = '#ffffff';
@@ -282,11 +359,17 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
 
       ctx.restore();
     }
-  }, [state, bgImage, editing, snapLines, buildFilterString]);
+  }, [state, bgImage, editing, snapLines, hoveredLayerId, buildFilterString, renderGradient]);
 
   useEffect(() => { render(); }, [render]);
 
+  // Re-render once fonts finish loading for accurate text metrics
+  useEffect(() => {
+    if (fontsLoaded) render();
+  }, [fontsLoaded, render]);
+
   useImperativeHandle(ref, () => ({
+    getScale: () => scale,
     exportImage: () => {
       // For export, need crossOrigin on the image
       if (bgImage && !bgImage.crossOrigin) {
@@ -300,6 +383,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
         // Draw background color
         ctx.fillStyle = state.backgroundColor;
         ctx.fillRect(0, 0, state.canvasWidth, state.canvasHeight);
+
+        // Draw gradient if present
+        if (state.backgroundGradient) {
+          renderGradient(ctx, state.backgroundGradient, state.canvasWidth, state.canvasHeight);
+        }
 
         // Draw the image (may taint the canvas, but try)
         const filterStr = buildFilterString(state.imageFilters);
@@ -351,8 +439,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
       const layer = state.layers[i];
       if (!layer.visible) continue;
       const pad = 8;
+      const lines = layer.text.split('\n');
+      const lineHeight = layer.fontSize * 1.3;
+      const totalH = lines.length > 1 ? (lines.length - 1) * lineHeight + layer.fontSize : layer.fontSize;
       if (x >= layer.x - pad && x <= layer.x + layer.width + pad &&
-          y >= layer.y - pad && y <= layer.y + layer.fontSize + pad) {
+          y >= layer.y - pad && y <= layer.y + totalH + pad) {
         return layer;
       }
     }
@@ -363,6 +454,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
     const hit = hitTest(e.clientX, e.clientY);
     if (hit) {
       onSelectLayer(hit.id);
+      setShowEditHint(true);
+      setTimeout(() => setShowEditHint(false), 2000);
       if (hit.locked) return; // Can select but not drag locked layers
       const rect = canvasRef.current!.getBoundingClientRect();
       const x = (e.clientX - rect.left) / scale;
@@ -370,11 +463,25 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
       setDragging({ id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y });
     } else {
       onSelectLayer(null);
+      setShowEditHint(false);
     }
   }, [hitTest, onSelectLayer, scale]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!dragging) return;
+    // Hover detection (when not dragging)
+    if (!dragging) {
+      const hit = hitTest(e.clientX, e.clientY);
+      const newHoveredId = hit ? hit.id : null;
+      if (newHoveredId !== hoveredLayerId) {
+        setHoveredLayerId(newHoveredId);
+      }
+      // Update cursor
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.style.cursor = hit ? (hit.locked ? 'not-allowed' : 'move') : 'default';
+      }
+      return;
+    }
     const rect = canvasRef.current!.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scale;
     const y = (e.clientY - rect.top) / scale;
@@ -388,7 +495,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
     }
 
     onUpdateLayer(dragging.id, { x: newX, y: newY });
-  }, [dragging, scale, onUpdateLayer, state.layers, calcSnapLines]);
+  }, [dragging, scale, onUpdateLayer, state.layers, calcSnapLines, hitTest, hoveredLayerId]);
 
   const handleMouseUp = useCallback(() => {
     setDragging(null);
@@ -475,9 +582,26 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={() => { handleMouseUp(); setHoveredLayerId(null); }}
         onDoubleClick={handleDblClick}
       />
+
+      {/* Edit hint tooltip */}
+      {showEditHint && state.selectedLayerId && !editing && (
+        <div
+          className="absolute pointer-events-none animate-fade-in"
+          style={{
+            bottom: '8px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 20,
+          }}
+        >
+          <div className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm whitespace-nowrap">
+            Double-click to edit text
+          </div>
+        </div>
+      )}
     </div>
   );
 });

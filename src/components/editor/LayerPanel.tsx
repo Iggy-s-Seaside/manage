@@ -60,27 +60,29 @@ export function LayerPanel({
 
                 {layer.locked && <Lock size={10} className="text-amber-500 shrink-0" />}
 
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <div className={`flex gap-0.5 transition-opacity shrink-0 ${
+                  selectedId === layer.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}>
                   {onToggleLock && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onToggleLock(layer.id); }}
-                      className="p-0.5 rounded hover:bg-surface-active text-text-muted"
+                      className="p-1 rounded hover:bg-surface-active text-text-muted"
                       title={layer.locked ? 'Unlock' : 'Lock'}
                     >
-                      {layer.locked ? <Unlock size={11} /> : <Lock size={11} />}
+                      {layer.locked ? <Unlock size={14} /> : <Lock size={14} />}
                     </button>
                   )}
-                  <button onClick={(e) => { e.stopPropagation(); moveLayer(realIndex, 'up'); }} className="p-0.5 rounded hover:bg-surface-active text-text-muted" title="Move up">
-                    <ChevronUp size={12} />
+                  <button onClick={(e) => { e.stopPropagation(); moveLayer(realIndex, 'up'); }} className="p-1 rounded hover:bg-surface-active text-text-muted" title="Move up">
+                    <ChevronUp size={14} />
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); moveLayer(realIndex, 'down'); }} className="p-0.5 rounded hover:bg-surface-active text-text-muted" title="Move down">
-                    <ChevronDown size={12} />
+                  <button onClick={(e) => { e.stopPropagation(); moveLayer(realIndex, 'down'); }} className="p-1 rounded hover:bg-surface-active text-text-muted" title="Move down">
+                    <ChevronDown size={14} />
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); onDuplicate(layer); }} className="p-0.5 rounded hover:bg-surface-active text-text-muted" title="Duplicate">
-                    <Copy size={12} />
+                  <button onClick={(e) => { e.stopPropagation(); onDuplicate(layer); }} className="p-1 rounded hover:bg-surface-active text-text-muted" title="Duplicate">
+                    <Copy size={14} />
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(layer.id); }} className="p-0.5 rounded hover:bg-danger-light text-text-muted hover:text-danger" title="Delete">
-                    <Trash2 size={12} />
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(layer.id); }} className="p-1 rounded hover:bg-danger-light text-text-muted hover:text-danger" title="Delete">
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>

@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Undo2, Redo2, Download, Save, Upload, RectangleVertical, Square,
-  Loader2, Image, Sliders, Type, Heading1, Heading2, Tag, Megaphone
+  Loader2, Image, Sliders, Type, Heading1, Heading2, Tag, Megaphone, ZoomIn, ZoomOut, Maximize
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Canvas, type CanvasHandle } from '../components/editor/Canvas';
@@ -51,6 +51,7 @@ export function SpecialEditor() {
   const [rightTab, setRightTab] = useState<RightTab>('properties');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<MobileSheet>(null);
+  const [zoom, setZoom] = useState<number | undefined>(undefined); // undefined = auto-fit
   const [saveForm, setSaveForm] = useState({
     title: '',
     description: '',
@@ -131,6 +132,7 @@ export function SpecialEditor() {
           state: {
             backgroundImage: null,
             backgroundColor: template.backgroundColor,
+            backgroundGradient: template.backgroundGradient,
             imageFilters: { ...DEFAULT_IMAGE_FILTERS },
             layers: template.defaultLayers.map((l) => ({ ...l, id: crypto.randomUUID(), locked: false, visible: true })),
             selectedLayerId: null,
@@ -333,6 +335,34 @@ export function SpecialEditor() {
           <Redo2 size={16} />
         </button>
 
+        <div className="w-px h-6 bg-border" />
+
+        {/* Zoom controls */}
+        <button
+          onClick={() => setZoom(z => Math.max(0.25, (z ?? canvasRef.current?.getScale() ?? 0.5) - 0.1))}
+          className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted"
+          title="Zoom Out"
+        >
+          <ZoomOut size={16} />
+        </button>
+        <span className="text-xs text-text-muted w-10 text-center tabular-nums">
+          {Math.round((zoom ?? canvasRef.current?.getScale() ?? 1) * 100)}%
+        </span>
+        <button
+          onClick={() => setZoom(z => Math.min(2, (z ?? canvasRef.current?.getScale() ?? 0.5) + 0.1))}
+          className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted"
+          title="Zoom In"
+        >
+          <ZoomIn size={16} />
+        </button>
+        <button
+          onClick={() => setZoom(undefined)}
+          className={`p-1.5 rounded-lg hover:bg-surface-hover transition-colors ${zoom === undefined ? 'text-primary' : 'text-text-muted'}`}
+          title="Fit to Screen"
+        >
+          <Maximize size={16} />
+        </button>
+
         <div className="flex-1" />
 
         {/* Background color */}
@@ -356,7 +386,7 @@ export function SpecialEditor() {
         </button>
       </div>
 
-      {/* Mobile header — simple back + title */}
+      {/* Mobile header — clean: back + title + canvas size + BG color */}
       <div className="flex md:hidden items-center gap-3 px-4 py-2.5 bg-surface border-b border-border shrink-0">
         <button onClick={() => navigate('/specials')} className="p-1.5 rounded-lg hover:bg-surface-hover">
           <ArrowLeft size={18} className="text-text-primary" />
@@ -364,28 +394,27 @@ export function SpecialEditor() {
         <h2 className="text-sm font-semibold text-text-primary flex-1 truncate">
           {isEdit ? 'Edit Special' : 'New Special'}
         </h2>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-text-muted">BG:</span>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            <button
+              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1080 })}
+              className={`p-1.5 rounded transition-colors ${state.canvasHeight === 1080 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
+            >
+              <Square size={14} />
+            </button>
+            <button
+              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1920 })}
+              className={`p-1.5 rounded transition-colors ${state.canvasHeight === 1920 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
+            >
+              <RectangleVertical size={14} />
+            </button>
+          </div>
           <input
             type="color"
             value={state.backgroundColor}
             onChange={(e) => dispatch({ type: 'SET_BACKGROUND_COLOR', color: e.target.value })}
-            className="w-6 h-6 rounded cursor-pointer border border-border"
+            className="w-8 h-8 rounded cursor-pointer border border-border"
           />
-        </div>
-        <div className="flex gap-1">
-          <button
-            onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1080 })}
-            className={`p-1 rounded transition-colors ${state.canvasHeight === 1080 ? 'bg-primary text-white' : 'text-text-muted'}`}
-          >
-            <Square size={14} />
-          </button>
-          <button
-            onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1920 })}
-            className={`p-1 rounded transition-colors ${state.canvasHeight === 1920 ? 'bg-primary text-white' : 'text-text-muted'}`}
-          >
-            <RectangleVertical size={14} />
-          </button>
         </div>
       </div>
 
@@ -416,6 +445,7 @@ export function SpecialEditor() {
               state={state}
               onSelectLayer={(id) => dispatch({ type: 'SELECT_LAYER', id })}
               onUpdateLayer={(id, changes) => dispatch({ type: 'UPDATE_LAYER', id, changes })}
+              zoomOverride={zoom}
             />
           </div>
         </div>
@@ -489,6 +519,7 @@ export function SpecialEditor() {
         canRedo={canRedo}
         uploading={uploading}
         hasSelection={!!selectedLayer}
+        activeSheet={mobileSheet}
       />
 
       {/* Mobile Bottom Sheets */}

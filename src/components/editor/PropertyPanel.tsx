@@ -64,23 +64,23 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
         </div>
 
         <div className="flex gap-1 mb-2">
-          <button onClick={() => toggleFontStyle('bold')} className={`p-2 rounded-lg transition-colors ${isBold ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => toggleFontStyle('bold')} className={`p-2.5 rounded-lg transition-colors ${isBold ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <Bold size={14} />
           </button>
-          <button onClick={() => toggleFontStyle('italic')} className={`p-2 rounded-lg transition-colors ${isItalic ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => toggleFontStyle('italic')} className={`p-2.5 rounded-lg transition-colors ${isItalic ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <Italic size={14} />
           </button>
-          <button onClick={() => onUpdate({ textDecoration: isUnderline ? '' : 'underline' })} className={`p-2 rounded-lg transition-colors ${isUnderline ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => onUpdate({ textDecoration: isUnderline ? '' : 'underline' })} className={`p-2.5 rounded-lg transition-colors ${isUnderline ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <Underline size={14} />
           </button>
           <div className="w-px bg-border mx-1" />
-          <button onClick={() => onUpdate({ align: 'left' })} className={`p-2 rounded-lg transition-colors ${layer.align === 'left' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => onUpdate({ align: 'left' })} className={`p-2.5 rounded-lg transition-colors ${layer.align === 'left' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <AlignLeft size={14} />
           </button>
-          <button onClick={() => onUpdate({ align: 'center' })} className={`p-2 rounded-lg transition-colors ${layer.align === 'center' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => onUpdate({ align: 'center' })} className={`p-2.5 rounded-lg transition-colors ${layer.align === 'center' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <AlignCenter size={14} />
           </button>
-          <button onClick={() => onUpdate({ align: 'right' })} className={`p-2 rounded-lg transition-colors ${layer.align === 'right' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => onUpdate({ align: 'right' })} className={`p-2.5 rounded-lg transition-colors ${layer.align === 'right' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <AlignRight size={14} />
           </button>
         </div>
@@ -114,7 +114,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
                 <button
                   key={c}
                   onClick={() => onUpdate({ fill: c })}
-                  className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${layer.fill === c ? 'border-primary scale-110' : 'border-border'}`}
+                  className={`w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 ${layer.fill === c ? 'border-primary scale-110' : 'border-border'}`}
                   style={{ backgroundColor: c }}
                 />
               ))}

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Sparkles, UtensilsCrossed, Plus, TrendingUp, Camera } from 'lucide-react';
+import { Calendar, Sparkles, UtensilsCrossed, Plus, TrendingUp, Camera, MessageSquare } from 'lucide-react';
 import { useSupabaseCRUD } from '../hooks/useSupabaseCRUD';
 import { useInventoryItems, getLowStockItems } from '../hooks/useInventory';
+import { useMessages } from '../hooks/useMessages';
 import { QuickPostModal } from '../components/editor/QuickPostModal';
 import { LowStockWidget } from '../components/inventory/LowStockWidget';
+import { MessageWidget } from '../components/messages/MessageWidget';
 import type { IggyEvent, Special } from '../types';
 import { format, parseISO, isFuture } from 'date-fns';
 
@@ -13,7 +15,9 @@ export function Dashboard() {
   const { data: specials, refresh: refreshSpecials } = useSupabaseCRUD<Special>('specials');
   const { items: inventoryItems } = useInventoryItems();
   const lowStockItems = getLowStockItems(inventoryItems);
+  const { messages, loading: messagesLoading } = useMessages();
   const [quickPostOpen, setQuickPostOpen] = useState(false);
+  const unreadMessages = messages.filter(m => m.status === 'unread');
 
   const activeEvents = events.filter((e) => e.active);
   const activeSpecials = specials.filter((s) => s.active);
@@ -25,9 +29,10 @@ export function Dashboard() {
     .slice(0, 5);
 
   const stats = [
-    { label: 'Active Events', value: activeEvents.length, icon: Calendar, color: 'text-primary', bg: 'bg-primary-50' },
+    { label: 'Unread Messages', value: unreadMessages.length, icon: MessageSquare, color: 'text-primary', bg: 'bg-primary-50' },
+    { label: 'Active Events', value: activeEvents.length, icon: Calendar, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-500/10' },
     { label: 'Active Specials', value: activeSpecials.length, icon: Sparkles, color: 'text-accent', bg: 'bg-warning-light' },
-    { label: 'Total Events', value: events.length, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Total Events', value: events.length, icon: TrendingUp, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
   ];
 
   return (
@@ -40,7 +45,7 @@ export function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {stats.map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="card p-5">
             <div className="flex items-center gap-3">
@@ -138,6 +143,11 @@ export function Dashboard() {
 
       {/* Low Stock Widget */}
       <LowStockWidget items={lowStockItems} />
+      </div>
+
+      {/* Messages Widget */}
+      <div className="mb-6">
+        <MessageWidget messages={messages} loading={messagesLoading} />
       </div>
     </div>
   );

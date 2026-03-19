@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, type ReactNode } from 'react';
+import { X } from 'lucide-react';
 
 interface BottomSheetProps {
   open: boolean;
@@ -81,12 +82,16 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 320 }
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-3 border-b border-border">
-          <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-text-muted uppercase tracking-wider">Editor</span>
+            <span className="text-text-muted">/</span>
+            <h3 className="text-base font-bold text-text-primary">{title}</h3>
+          </div>
           <button
             onClick={onClose}
-            className="text-xs text-text-muted hover:text-text-primary transition-colors px-2 py-1"
+            className="p-2 rounded-lg hover:bg-surface-hover text-text-muted transition-colors"
           >
-            Done
+            <X size={18} />
           </button>
         </div>
 

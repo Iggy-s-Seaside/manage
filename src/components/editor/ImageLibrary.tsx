@@ -145,7 +145,7 @@ export function ImageLibrary({ open, onClose, onSelect }: ImageLibraryProps) {
               <p className="text-sm text-text-muted">No images found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {filtered.map((item) => (
                 <div
                   key={`${item.folder}/${item.name}`}
@@ -167,7 +167,7 @@ export function ImageLibrary({ open, onClose, onSelect }: ImageLibraryProps) {
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors pointer-events-none" />
 
                   {/* Actions */}
-                  <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-1.5 right-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}
                       className="p-1.5 rounded-lg bg-black/60 text-white hover:bg-danger/80 transition-colors"
@@ -177,7 +177,7 @@ export function ImageLibrary({ open, onClose, onSelect }: ImageLibraryProps) {
                   </div>
 
                   {/* Info */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-none">
                     <p className="text-[10px] text-white truncate">{item.name}</p>
                     <p className="text-[9px] text-white/60">{formatSize(item.size)}</p>
                   </div>

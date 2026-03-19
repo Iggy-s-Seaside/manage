@@ -1,11 +1,13 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Sparkles, UtensilsCrossed, LogOut, Menu, X, Sun, Moon, FolderOpen, Package } from 'lucide-react';
+import { LayoutDashboard, Calendar, Sparkles, UtensilsCrossed, LogOut, Menu, X, Sun, Moon, FolderOpen, Package, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useUnreadCount } from '../../hooks/useMessages';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/messages', icon: MessageSquare, label: 'Messages', badge: true },
   { to: '/events', icon: Calendar, label: 'Events' },
   { to: '/specials', icon: Sparkles, label: 'Specials' },
   { to: '/menu', icon: UtensilsCrossed, label: 'Menu' },
@@ -17,6 +19,7 @@ export function Sidebar() {
   const { signOut, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const unreadCount = useUnreadCount();
 
   const navContent = (
     <div className="flex flex-col h-full">
@@ -29,7 +32,7 @@ export function Sidebar() {
 
       {/* Nav Links */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {navItems.map(({ to, icon: Icon, label, badge }) => (
           <NavLink
             key={to}
             to={to}
@@ -45,6 +48,11 @@ export function Sidebar() {
           >
             <Icon size={18} />
             {label}
+            {badge && unreadCount > 0 && (
+              <span className="ml-auto bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                {unreadCount}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
@@ -73,13 +81,24 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile hamburger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-surface border border-border shadow-card"
-      >
-        <Menu size={20} />
-      </button>
+      {/* Mobile header bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center gap-3 px-4 py-3 bg-surface border-b border-border">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-1.5 rounded-lg hover:bg-surface-hover"
+        >
+          <Menu size={20} />
+        </button>
+        <h1 className="text-sm font-bold text-text-primary tracking-tight">
+          Iggy's <span className="text-primary">Manager</span>
+        </h1>
+        {unreadCount > 0 && (
+          <NavLink to="/messages" className="ml-auto flex items-center gap-1 text-xs text-primary">
+            <MessageSquare size={14} />
+            <span className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+          </NavLink>
+        )}
+      </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (

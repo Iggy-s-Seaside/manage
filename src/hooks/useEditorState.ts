@@ -11,6 +11,7 @@ interface HistoryState {
 type EditorAction =
   | { type: 'SET_BACKGROUND'; url: string | null }
   | { type: 'SET_BACKGROUND_COLOR'; color: string }
+  | { type: 'SET_BACKGROUND_GRADIENT'; gradient: string | undefined }
   | { type: 'SET_IMAGE_FILTERS'; filters: Partial<ImageFilters> }
   | { type: 'RESET_IMAGE_FILTERS' }
   | { type: 'ADD_LAYER'; layer: TextLayer }
@@ -86,6 +87,9 @@ function applyAction(state: EditorState, action: EditorAction): EditorState {
 
     case 'SET_BACKGROUND_COLOR':
       return { ...state, backgroundColor: action.color };
+
+    case 'SET_BACKGROUND_GRADIENT':
+      return { ...state, backgroundGradient: action.gradient };
 
     case 'SET_IMAGE_FILTERS':
       return { ...state, imageFilters: { ...state.imageFilters, ...action.filters } };

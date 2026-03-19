@@ -10,6 +10,7 @@ import { SpecialEditor } from './pages/SpecialEditor';
 import { MenuManager } from './pages/MenuManager';
 import { MediaLibraryPage } from './pages/MediaLibrary';
 import { Inventory } from './pages/Inventory';
+import { Messages } from './pages/Messages';
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/menu/:table" element={<MenuManager />} />
         <Route path="/media" element={<MediaLibraryPage />} />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/messages" element={<Messages />} />
       </Route>
     </Routes>
   );

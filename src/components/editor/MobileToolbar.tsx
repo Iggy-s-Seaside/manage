@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import {
   Plus, Image, Upload, Layers, Sliders, SlidersHorizontal,
-  Undo2, Redo2, Save, Download, Loader2
+  Undo2, Redo2, Save, Download, Loader2, MoreHorizontal
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
@@ -27,6 +28,7 @@ interface MobileToolbarProps {
   canRedo: boolean;
   uploading: boolean;
   hasSelection: boolean;
+  activeSheet?: string | null;
 }
 
 export function MobileToolbar({
@@ -44,7 +46,10 @@ export function MobileToolbar({
   canRedo,
   uploading,
   hasSelection,
+  activeSheet,
 }: MobileToolbarProps) {
+  const [moreOpen, setMoreOpen] = useState(false);
+
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface border-t border-border safe-area-bottom">
       {/* Preset strip — horizontal scroll */}
@@ -66,22 +71,35 @@ export function MobileToolbar({
         ))}
       </div>
 
-      {/* Main toolbar */}
-      <div className="flex items-center justify-around px-2 py-2">
-        <ToolButton icon={Image} label="Library" onClick={onOpenLibrary} />
-        <ToolButton icon={Upload} label="Upload" onClick={onUpload} loading={uploading} />
-        <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} />
-        <ToolButton
-          icon={SlidersHorizontal}
-          label="Props"
-          onClick={onOpenProperties}
-          active={hasSelection}
-        />
-        <ToolButton icon={Sliders} label="Adjust" onClick={onOpenAdjustments} />
-        <ToolButton icon={Undo2} label="Undo" onClick={onUndo} disabled={!canUndo} />
-        <ToolButton icon={Redo2} label="Redo" onClick={onRedo} disabled={!canRedo} />
-        <ToolButton icon={Download} label="Export" onClick={onExport} />
-        <ToolButton icon={Save} label="Save" onClick={onSave} primary />
+      {/* Main toolbar — 5 primary + More */}
+      <div className="relative">
+        {/* More popover */}
+        {moreOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+            <div className="absolute bottom-full right-2 mb-2 z-50 bg-surface border border-border rounded-xl shadow-modal p-2 flex gap-1 animate-fade-in">
+              <ToolButton icon={Sliders} label="Adjust" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} highlighted={activeSheet === 'adjustments'} />
+              <ToolButton icon={Undo2} label="Undo" onClick={() => { onUndo(); }} disabled={!canUndo} />
+              <ToolButton icon={Redo2} label="Redo" onClick={() => { onRedo(); }} disabled={!canRedo} />
+              <ToolButton icon={Download} label="Export" onClick={() => { onExport(); setMoreOpen(false); }} />
+            </div>
+          </>
+        )}
+
+        <div className="flex items-center justify-around px-3 py-2">
+          <ToolButton icon={Image} label="Library" onClick={onOpenLibrary} />
+          <ToolButton icon={Upload} label="Upload" onClick={onUpload} loading={uploading} />
+          <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
+          <ToolButton
+            icon={SlidersHorizontal}
+            label="Props"
+            onClick={onOpenProperties}
+            active={hasSelection}
+            highlighted={activeSheet === 'properties'}
+          />
+          <ToolButton icon={Save} label="Save" onClick={onSave} primary />
+          <ToolButton icon={MoreHorizontal} label="More" onClick={() => setMoreOpen(!moreOpen)} active={moreOpen} />
+        </div>
       </div>
     </div>
   );
@@ -95,6 +113,7 @@ function ToolButton({
   active,
   primary,
   loading,
+  highlighted,
 }: {
   icon: typeof Plus;
   label: string;
@@ -103,23 +122,26 @@ function ToolButton({
   active?: boolean;
   primary?: boolean;
   loading?: boolean;
+  highlighted?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors min-w-[44px] ${
-        primary
+      className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors w-12 ${
+        highlighted
+          ? 'text-primary bg-primary/15'
+          : primary
           ? 'text-primary'
           : active
-          ? 'text-primary bg-primary-50'
+          ? 'text-primary bg-primary/10'
           : disabled
           ? 'text-text-muted opacity-30'
           : 'text-text-muted hover:text-text-secondary'
       }`}
     >
       {loading ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
-      <span className="text-[10px] leading-none">{label}</span>
+      <span className="text-[11px] leading-none">{label}</span>
     </button>
   );
 }
