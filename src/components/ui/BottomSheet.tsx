@@ -9,11 +9,11 @@ interface BottomSheetProps {
   peekHeight?: number;
 }
 
-export function BottomSheet({ open, onClose, title, children, peekHeight = 320 }: BottomSheetProps) {
+export function BottomSheet({ open, onClose, title, children, peekHeight = 280 }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef({ startY: 0, currentY: 0, isDragging: false });
+  const dragRef = useRef({ startY: 0, isDragging: false });
 
-  // Close on escape
+  // Close on escape — but don't fire if FontPicker (or similar) already handled it
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -33,12 +33,13 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 320 }
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+  // Drag-to-close — only from the handle area, NOT from content scroll
+  const handleDragStart = useCallback((e: React.TouchEvent) => {
     dragRef.current.startY = e.touches[0].clientY;
     dragRef.current.isDragging = true;
   }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+  const handleDragMove = useCallback((e: React.TouchEvent) => {
     if (!dragRef.current.isDragging || !sheetRef.current) return;
     const deltaY = e.touches[0].clientY - dragRef.current.startY;
     if (deltaY > 0) {
@@ -46,7 +47,7 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 320 }
     }
   }, []);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+  const handleDragEnd = useCallback((e: React.TouchEvent) => {
     if (!dragRef.current.isDragging || !sheetRef.current) return;
     dragRef.current.isDragging = false;
     const deltaY = e.changedTouches[0].clientY - dragRef.current.startY;
@@ -66,17 +67,19 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 320 }
         onClick={onClose}
       />
 
-      {/* Sheet */}
+      {/* Sheet — 55vh default so users can still see the canvas above */}
       <div
         ref={sheetRef}
         className="absolute bottom-0 left-0 right-0 bg-surface border-t border-border rounded-t-2xl shadow-modal transition-transform duration-300 ease-out"
-        style={{ maxHeight: '80vh' }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        style={{ maxHeight: '55vh' }}
       >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 cursor-grab">
+        {/* Drag handle — only this area triggers drag-to-close */}
+        <div
+          className="flex justify-center pt-3 pb-1 cursor-grab"
+          onTouchStart={handleDragStart}
+          onTouchMove={handleDragMove}
+          onTouchEnd={handleDragEnd}
+        >
           <div className="w-10 h-1 rounded-full bg-border" />
         </div>
 
@@ -95,10 +98,10 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 320 }
           </button>
         </div>
 
-        {/* Content */}
+        {/* Content — scrollable independently of drag handle */}
         <div
           className="overflow-y-auto overscroll-contain p-4"
-          style={{ maxHeight: `calc(80vh - 60px)`, minHeight: `${peekHeight}px` }}
+          style={{ maxHeight: `calc(55vh - 60px)`, minHeight: `${peekHeight}px` }}
         >
           {children}
         </div>

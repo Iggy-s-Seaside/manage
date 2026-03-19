@@ -73,22 +73,22 @@ export function MobileToolbar({
 
       {/* Main toolbar — 5 primary + More */}
       <div className="relative">
-        {/* More popover */}
+        {/* More popover — less-frequent actions */}
         {moreOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
             <div className="absolute bottom-full right-2 mb-2 z-50 bg-surface border border-border rounded-xl shadow-modal p-2 flex gap-1 animate-fade-in">
+              <ToolButton icon={Image} label="Library" onClick={() => { onOpenLibrary(); setMoreOpen(false); }} />
+              <ToolButton icon={Upload} label="Upload" onClick={() => { onUpload(); setMoreOpen(false); }} loading={uploading} />
               <ToolButton icon={Sliders} label="Adjust" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} highlighted={activeSheet === 'adjustments'} />
-              <ToolButton icon={Undo2} label="Undo" onClick={() => { onUndo(); }} disabled={!canUndo} />
-              <ToolButton icon={Redo2} label="Redo" onClick={() => { onRedo(); }} disabled={!canRedo} />
               <ToolButton icon={Download} label="Export" onClick={() => { onExport(); setMoreOpen(false); }} />
             </div>
           </>
         )}
 
         <div className="flex items-center justify-around px-3 py-2">
-          <ToolButton icon={Image} label="Library" onClick={onOpenLibrary} />
-          <ToolButton icon={Upload} label="Upload" onClick={onUpload} loading={uploading} />
+          <ToolButton icon={Undo2} label="Undo" onClick={onUndo} disabled={!canUndo} />
+          <ToolButton icon={Redo2} label="Redo" onClick={onRedo} disabled={!canRedo} />
           <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
           <ToolButton
             icon={SlidersHorizontal}

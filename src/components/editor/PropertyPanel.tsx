@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Trash2 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 import { BRAND_COLORS } from '../../types';
@@ -10,6 +11,7 @@ interface PropertyPanelProps {
 }
 
 export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const toggleFontStyle = (style: 'bold' | 'italic') => {
     const parts = layer.fontStyle.split(' ').filter(Boolean);
     const has = parts.includes(style);
@@ -112,7 +114,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
                 <button
                   key={c}
                   onClick={() => onUpdate({ fill: c })}
-                  className={`w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 ${layer.fill === c ? 'border-primary scale-110' : 'border-border'}`}
+                  className={`w-9 h-9 rounded-full border-2 transition-transform hover:scale-110 ${layer.fill === c ? 'border-primary scale-110' : 'border-border'}`}
                   style={{ backgroundColor: c }}
                 />
               ))}
@@ -216,9 +218,26 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
         </div>
       </Section>
 
-      <button onClick={onDelete} className="btn-danger w-full text-xs">
-        <Trash2 size={14} /> Delete Layer
-      </button>
+      {confirmDelete ? (
+        <div className="flex gap-2">
+          <button
+            onClick={() => { onDelete(); setConfirmDelete(false); }}
+            className="btn-danger flex-1 text-xs"
+          >
+            Confirm Delete
+          </button>
+          <button
+            onClick={() => setConfirmDelete(false)}
+            className="btn-secondary flex-1 text-xs"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => setConfirmDelete(true)} className="btn-danger w-full text-xs">
+          <Trash2 size={14} /> Delete Layer
+        </button>
+      )}
     </div>
   );
 }

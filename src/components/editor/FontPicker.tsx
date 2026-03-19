@@ -23,14 +23,19 @@ export function FontPicker({ value, onChange }: FontPickerProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Close on escape
+  // Close on escape — stop propagation so the page-level Escape handler
+  // (which deselects the layer) doesn't also fire.
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setOpen(false);
+      }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    // Use capture phase so we intercept before the page handler
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
   }, [open]);
 
   return (

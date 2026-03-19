@@ -39,52 +39,58 @@ export function LayerPanel({
               <div
                 key={layer.id}
                 onClick={() => onSelect(layer.id)}
-                className={`group flex items-center gap-1.5 px-2 py-2 rounded-lg cursor-pointer transition-colors ${
+                className={`group rounded-lg cursor-pointer transition-colors ${
                   selectedId === layer.id
                     ? 'bg-primary-50 border border-primary/30'
                     : 'hover:bg-surface-hover border border-transparent'
                 } ${!layer.visible ? 'opacity-40' : ''}`}
               >
-                {onToggleVisibility && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onToggleVisibility(layer.id); }}
-                    className="p-0.5 rounded hover:bg-surface-active text-text-muted shrink-0"
-                    title={layer.visible ? 'Hide' : 'Show'}
-                  >
-                    {layer.visible ? <Eye size={11} /> : <EyeOff size={11} />}
-                  </button>
-                )}
-
-                <Type size={13} className="text-text-muted shrink-0" />
-                <span className="text-xs text-text-primary truncate flex-1">{layer.text || 'Empty'}</span>
-
-                {layer.locked && <Lock size={10} className="text-amber-500 shrink-0" />}
-
-                <div className={`flex gap-0.5 transition-opacity shrink-0 ${
-                  selectedId === layer.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                }`}>
-                  {onToggleLock && (
+                {/* Layer name row */}
+                <div className="flex items-center gap-1.5 px-2 py-2">
+                  {onToggleVisibility && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); onToggleLock(layer.id); }}
-                      className="p-1 rounded hover:bg-surface-active text-text-muted"
-                      title={layer.locked ? 'Unlock' : 'Lock'}
+                      onClick={(e) => { e.stopPropagation(); onToggleVisibility(layer.id); }}
+                      className="p-0.5 rounded hover:bg-surface-active text-text-muted shrink-0"
+                      title={layer.visible ? 'Hide' : 'Show'}
                     >
-                      {layer.locked ? <Unlock size={14} /> : <Lock size={14} />}
+                      {layer.visible ? <Eye size={11} /> : <EyeOff size={11} />}
                     </button>
                   )}
-                  <button onClick={(e) => { e.stopPropagation(); moveLayer(realIndex, 'up'); }} className="p-1 rounded hover:bg-surface-active text-text-muted" title="Move up">
-                    <ChevronUp size={14} />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); moveLayer(realIndex, 'down'); }} className="p-1 rounded hover:bg-surface-active text-text-muted" title="Move down">
-                    <ChevronDown size={14} />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); onDuplicate(layer); }} className="p-1 rounded hover:bg-surface-active text-text-muted" title="Duplicate">
-                    <Copy size={14} />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(layer.id); }} className="p-1 rounded hover:bg-danger-light text-text-muted hover:text-danger" title="Delete">
-                    <Trash2 size={14} />
-                  </button>
+
+                  <Type size={13} className="text-text-muted shrink-0" />
+                  <span className="text-xs text-text-primary truncate flex-1">
+                    {layer.text || 'Empty'}
+                  </span>
+
+                  {layer.locked && <Lock size={10} className="text-amber-500 shrink-0" />}
                 </div>
+
+                {/* Action buttons — shown below text when selected */}
+                {selectedId === layer.id && (
+                  <div className="flex gap-0.5 px-2 pb-2 pt-0">
+                    {onToggleLock && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onToggleLock(layer.id); }}
+                        className="p-1.5 rounded hover:bg-surface-active text-text-muted"
+                        title={layer.locked ? 'Unlock' : 'Lock'}
+                      >
+                        {layer.locked ? <Unlock size={14} /> : <Lock size={14} />}
+                      </button>
+                    )}
+                    <button onClick={(e) => { e.stopPropagation(); moveLayer(realIndex, 'up'); }} className="p-1.5 rounded hover:bg-surface-active text-text-muted" title="Move up">
+                      <ChevronUp size={14} />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); moveLayer(realIndex, 'down'); }} className="p-1.5 rounded hover:bg-surface-active text-text-muted" title="Move down">
+                      <ChevronDown size={14} />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); onDuplicate(layer); }} className="p-1.5 rounded hover:bg-surface-active text-text-muted" title="Duplicate">
+                      <Copy size={14} />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(layer.id); }} className="p-1.5 rounded hover:bg-danger-light text-text-muted hover:text-danger" title="Delete">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
