@@ -447,10 +447,8 @@ export function SpecialEditor() {
               onUpdateLayer={(id, changes) => dispatch({ type: 'UPDATE_LAYER', id, changes })}
               zoomOverride={zoom}
               onLayerTapped={() => {
-                // On mobile, open properties when tapping a layer for easy editing
-                if (window.innerWidth < 768 && mobileSheet !== 'properties') {
-                  setMobileSheet('properties');
-                }
+                // Don't auto-open properties on tap — let users drag freely.
+                // Properties are auto-opened only when ADDING a new layer from presets.
               }}
             />
           </div>

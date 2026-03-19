@@ -1,6 +1,7 @@
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Trash2 } from 'lucide-react';
 import type { TextLayer } from '../../types';
-import { EDITOR_FONTS, BRAND_COLORS } from '../../types';
+import { BRAND_COLORS } from '../../types';
+import { FontPicker } from './FontPicker';
 
 interface PropertyPanelProps {
   layer: TextLayer;
@@ -33,15 +34,12 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
 
       {/* Typography */}
       <Section title="Typography">
-        <select
-          className="input-field mb-2"
-          value={layer.fontFamily}
-          onChange={(e) => onUpdate({ fontFamily: e.target.value })}
-        >
-          {EDITOR_FONTS.map((f) => (
-            <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
-          ))}
-        </select>
+        <div className="mb-2">
+          <FontPicker
+            value={layer.fontFamily}
+            onChange={(font) => onUpdate({ fontFamily: font })}
+          />
+        </div>
 
         <div className="flex items-center gap-2 mb-2">
           <div className="flex-1">
