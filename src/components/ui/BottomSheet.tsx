@@ -1,5 +1,5 @@
-import { useRef, useEffect, useCallback, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { useRef, useEffect, useCallback, useState, type ReactNode } from 'react';
+import { X, ChevronLeft } from 'lucide-react';
 
 interface BottomSheetProps {
   open: boolean;
@@ -9,11 +9,12 @@ interface BottomSheetProps {
   peekHeight?: number;
 }
 
-export function BottomSheet({ open, onClose, title, children, peekHeight = 280 }: BottomSheetProps) {
+export function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ startY: 0, isDragging: false });
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-  // Close on escape — but don't fire if FontPicker (or similar) already handled it
+  // Close on escape
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -33,7 +34,23 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 280 }
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  // Drag-to-close — only from the handle area, NOT from content scroll
+  // Detect keyboard open/close via visualViewport resize
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const handleResize = () => {
+      // If visualViewport height is significantly less than window height, keyboard is open
+      const isKeyboard = vv.height < window.innerHeight * 0.75;
+      setKeyboardVisible(isKeyboard);
+    };
+
+    vv.addEventListener('resize', handleResize);
+    return () => vv.removeEventListener('resize', handleResize);
+  }, [open]);
+
+  // Drag-to-close — only from the handle area
   const handleDragStart = useCallback((e: React.TouchEvent) => {
     dragRef.current.startY = e.touches[0].clientY;
     dragRef.current.isDragging = true;
@@ -60,22 +77,47 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 280 }
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
+    <div className="fixed inset-0 z-[70] lg:hidden">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/60 animate-fade-in"
         onClick={onClose}
       />
 
-      {/* Sheet — 55vh default so users can still see the canvas above */}
+      {/* Full-screen sheet */}
       <div
         ref={sheetRef}
-        className="absolute bottom-0 left-0 right-0 bg-surface border-t border-border rounded-t-2xl shadow-modal animate-sheet-up"
-        style={{ maxHeight: '55vh' }}
+        className="absolute inset-x-0 bottom-0 top-0 bg-surface flex flex-col animate-sheet-up"
+        style={{
+          // When keyboard is visible, let the sheet resize with the visual viewport
+          height: keyboardVisible ? `${window.visualViewport?.height ?? window.innerHeight}px` : '100%',
+          transition: keyboardVisible ? 'none' : 'height 0.3s ease',
+        }}
       >
-        {/* Drag handle — only this area triggers drag-to-close */}
+        {/* Header with close */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border shrink-0">
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center rounded-lg hover:bg-surface-hover text-text-muted transition-colors"
+            style={{ minWidth: 44, minHeight: 44 }}
+            aria-label="Close"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <h3 className="text-base font-bold text-text-primary flex-1">{title}</h3>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center rounded-lg hover:bg-surface-hover text-text-muted transition-colors"
+            style={{ minWidth: 44, minHeight: 44 }}
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Drag indicator (subtle, for gesture hint) */}
         <div
-          className="flex justify-center pt-3 pb-1 cursor-grab"
+          className="flex justify-center py-1 cursor-grab shrink-0"
           onTouchStart={handleDragStart}
           onTouchMove={handleDragMove}
           onTouchEnd={handleDragEnd}
@@ -83,27 +125,8 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 280 }
           <div className="w-10 h-1 rounded-full bg-border" />
         </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 pb-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-text-muted uppercase tracking-wider">Editor</span>
-            <span className="text-text-muted">/</span>
-            <h3 className="text-base font-bold text-text-primary">{title}</h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center rounded-lg hover:bg-surface-hover text-text-muted transition-colors"
-            style={{ minWidth: 44, minHeight: 44 }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Content — scrollable independently of drag handle */}
-        <div
-          className="overflow-y-auto overscroll-contain p-4"
-          style={{ maxHeight: `calc(55vh - 60px)`, minHeight: `${peekHeight}px` }}
-        >
+        {/* Content — fills remaining space, scrollable */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-20">
           {children}
         </div>
       </div>
