@@ -111,11 +111,14 @@ export function SpecialEditor() {
     }
   }, [state]);
 
-  // Load draft on mount
+  // Load draft on mount (ref guard prevents StrictMode double-fire)
+  const draftPromptShown = useRef(false);
   useEffect(() => {
+    if (draftPromptShown.current) return;
     if (hasDraft()) {
       const draft = loadDraft();
       if (draft) {
+        draftPromptShown.current = true;
         toast((t) => (
           <div className="flex items-center gap-3">
             <span className="text-sm">Resume your draft?</span>
@@ -128,7 +131,6 @@ export function SpecialEditor() {
                 dispatch({ type: 'LOAD_STATE', state: editorState });
                 setSaveForm(draft.saveForm);
                 toast.dismiss(t.id);
-                toast.success('Draft restored!');
               }}
               className="px-3 py-1 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary-hover"
             >
@@ -863,9 +865,18 @@ export function SpecialEditor() {
       {/* Mobile floating font picker — overlays canvas for real-time preview */}
       {mobileFontPickerOpen && selectedLayer && (
         <MobileFontPicker
-          currentFont={selectedLayer.fontFamily}
-          onSelect={(font) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, changes: { fontFamily: font } })}
+          layer={selectedLayer}
+          onUpdate={(changes) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, changes })}
           onClose={() => setMobileFontPickerOpen(false)}
+          elementScreenY={(() => {
+            // Calculate where the selected element is on screen (0=top, 1=bottom)
+            const canvasEl = document.querySelector('[data-layer-id="' + selectedLayer.id + '"]');
+            if (canvasEl) {
+              const rect = canvasEl.getBoundingClientRect();
+              return (rect.top + rect.height / 2) / window.innerHeight;
+            }
+            return 0.5;
+          })()}
         />
       )}
 
