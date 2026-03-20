@@ -56,14 +56,17 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
       if (!viewportRef.current) return;
       const vw = viewportRef.current.clientWidth;
       const vh = viewportRef.current.clientHeight;
-      const padding = 16;
-      const scaleX = (vw - padding) / state.canvasWidth;
-      const scaleY = (vh - padding) / state.canvasHeight;
       const isMobile = vw < 768;
-      // On mobile: fill width so text is readable, user can pan vertically
-      // On desktop: fit both dimensions
+      // On mobile: minimal padding, account for toolbar overlay (60px)
+      // On desktop: standard padding, fit both dimensions
+      const padding = isMobile ? 8 : 16;
+      const toolbarH = isMobile ? 60 : 0;
+      const scaleX = (vw - padding) / state.canvasWidth;
+      const scaleY = (vh - padding - toolbarH) / state.canvasHeight;
+      // On mobile: fit canvas fully in the visible area (above toolbar)
+      // so the entire design is visible without scrolling
       const newFit = isMobile
-        ? Math.min(scaleX, 1)
+        ? Math.min(scaleX, scaleY, 1)
         : Math.min(scaleX, scaleY, 1);
       setFitScale(newFit);
     };

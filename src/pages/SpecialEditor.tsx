@@ -446,7 +446,7 @@ export function SpecialEditor() {
   }, []);
 
   return (
-    <div className="md:h-[calc(100vh-3rem)] h-screen flex flex-col -m-6 -mt-16 lg:-m-8 lg:mt-[-2rem] editor-viewport">
+    <div className="md:h-[calc(100vh-3rem)] md:-m-6 lg:-m-8 md:relative md:flex md:flex-col fixed inset-0 z-50 flex flex-col bg-background">
       {/* Desktop Toolbar — hidden on mobile (MobileToolbar handles it) */}
       <div className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-surface border-b border-border shrink-0 overflow-x-auto">
         <button onClick={handleBack} className="btn-ghost text-xs py-1.5 px-2" aria-label="Back to specials">
@@ -673,12 +673,13 @@ export function SpecialEditor() {
         </button>
       </div>
 
-      {/* Mobile header — minimal, part of flow (not fixed) */}
+      {/* Mobile header — ultra-minimal, just back + title */}
       <div
-        className="flex md:hidden items-center gap-3 px-4 py-2 shrink-0 bg-surface border-b border-border"
+        className="flex md:hidden items-center gap-3 px-3 py-1.5 shrink-0 bg-surface/80 backdrop-blur-md border-b border-border/50"
         style={{
-          opacity: isGesturing ? 0.3 : 1,
-          transition: 'opacity 150ms ease',
+          opacity: isGesturing ? 0 : 1,
+          transition: 'opacity 200ms ease',
+          pointerEvents: isGesturing ? 'none' : 'auto',
         }}
       >
         <button onClick={handleBack} className="p-1.5 rounded-lg hover:bg-surface-hover" aria-label="Back to specials">
@@ -687,48 +688,6 @@ export function SpecialEditor() {
         <h2 className="text-sm font-semibold text-text-primary flex-1 truncate">
           {isEdit ? 'Edit Special' : 'New Special'}
         </h2>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            <button
-              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1080 })}
-              className={`p-1.5 rounded transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
-              aria-label="Square canvas"
-              title="Square (1080×1080)"
-            >
-              <Square size={14} />
-            </button>
-            <button
-              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1350 })}
-              className={`p-1.5 rounded transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1350 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
-              aria-label="Portrait canvas"
-              title="Portrait (1080×1350)"
-            >
-              <RectangleVertical size={14} />
-            </button>
-            <button
-              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1920 })}
-              className={`p-1.5 rounded transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1920 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
-              aria-label="Story canvas"
-              title="Story (1080×1920)"
-            >
-              <RectangleVertical size={14} className="scale-y-125" />
-            </button>
-            <button
-              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1920, height: 1080 })}
-              className={`p-1.5 rounded transition-colors ${state.canvasWidth === 1920 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
-              aria-label="Landscape canvas"
-              title="Landscape (1920×1080)"
-            >
-              <RectangleHorizontal size={14} />
-            </button>
-          </div>
-          <input
-            type="color"
-            value={state.backgroundColor}
-            onChange={(e) => dispatch({ type: 'SET_BACKGROUND_COLOR', color: e.target.value })}
-            className="w-8 h-8 rounded cursor-pointer border border-border"
-          />
-        </div>
       </div>
 
       {/* Editor Body */}
@@ -748,7 +707,7 @@ export function SpecialEditor() {
         </div>
 
         {/* Canvas Area — DOM-based canvas with gesture handling */}
-        <div className="flex-1 bg-surface-active pb-20 md:pb-0 overflow-hidden">
+        <div className="flex-1 bg-black/40 md:bg-surface-active overflow-hidden">
           <DomCanvas
             ref={canvasRef}
             state={state}
@@ -836,6 +795,11 @@ export function SpecialEditor() {
         onRedo={() => dispatch({ type: 'REDO' })}
         onSave={() => setSaveModalOpen(true)}
         onExport={() => setExportModalOpen(true)}
+        onSetCanvasSize={(w, h) => dispatch({ type: 'SET_CANVAS_SIZE', width: w, height: h })}
+        onSetBgColor={(color) => dispatch({ type: 'SET_BACKGROUND_COLOR', color })}
+        canvasWidth={state.canvasWidth}
+        canvasHeight={state.canvasHeight}
+        bgColor={state.backgroundColor}
         canUndo={canUndo}
         canRedo={canRedo}
         uploading={uploading}

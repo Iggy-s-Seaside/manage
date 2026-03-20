@@ -176,35 +176,35 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
           </div>
         )}
 
-        {/* Quick-action buttons (duplicate + delete) — below selection, scaled for visibility */}
+        {/* Quick-action buttons (duplicate + delete) — below selection */}
         {!layer.locked && (onDuplicate || onDelete) && (
           <div
             className="absolute pointer-events-auto flex gap-1"
             style={{
               left: '50%',
-              top: boxH + 8,
+              top: boxH + 6 / zoom,
               transform: `translateX(-50%) scale(${1 / zoom})`,
               transformOrigin: 'top center',
             }}
           >
             {onDuplicate && (
               <button
-                className="flex items-center justify-center rounded-lg bg-surface/90 border border-border backdrop-blur-sm shadow-md"
-                style={{ width: 44, height: 44 }}
+                className="flex items-center justify-center rounded-md bg-surface/90 border border-border/50 backdrop-blur-sm shadow-sm"
+                style={{ width: 32, height: 32 }}
                 onPointerDown={(e) => { e.stopPropagation(); onDuplicate(layer); }}
                 aria-label="Duplicate"
               >
-                <Copy size={16} className="text-primary" />
+                <Copy size={14} className="text-primary" />
               </button>
             )}
             {onDelete && (
               <button
-                className="flex items-center justify-center rounded-lg bg-surface/90 border border-border backdrop-blur-sm shadow-md"
-                style={{ width: 44, height: 44 }}
+                className="flex items-center justify-center rounded-md bg-surface/90 border border-border/50 backdrop-blur-sm shadow-sm"
+                style={{ width: 32, height: 32 }}
                 onPointerDown={(e) => { e.stopPropagation(); onDelete(layer.id); }}
                 aria-label="Delete"
               >
-                <Trash2 size={16} className="text-red-400" />
+                <Trash2 size={14} className="text-red-400" />
               </button>
             )}
           </div>

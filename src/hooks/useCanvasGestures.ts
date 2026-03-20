@@ -81,8 +81,17 @@ export function useCanvasGestures({
     if (!viewportRef.current) return;
     const vw = viewportRef.current.clientWidth;
     const vh = viewportRef.current.clientHeight;
-    const px = (vw - canvasWidth * zoom) / 2;
-    const py = (vh - canvasHeight * zoom) / 2;
+    const isMobile = vw < 768;
+    const scaledW = canvasWidth * zoom;
+    const scaledH = canvasHeight * zoom;
+    const px = (vw - scaledW) / 2;
+    // On mobile, account for the fixed toolbar (60px) covering the bottom.
+    // Center the canvas in the visible area above the toolbar, with a small top margin.
+    const toolbarHeight = isMobile ? 60 : 0;
+    const visibleH = vh - toolbarHeight;
+    const py = isMobile
+      ? Math.max(8, (visibleH - scaledH) / 2)
+      : (vh - scaledH) / 2;
     panXRef.current = px;
     panYRef.current = py;
     applyTransform();

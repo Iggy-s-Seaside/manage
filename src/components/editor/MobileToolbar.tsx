@@ -1,7 +1,8 @@
 import { useState, memo } from 'react';
 import {
   Plus, Image, Upload, Layers, Sliders, SlidersHorizontal,
-  Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate
+  Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate,
+  Square, RectangleVertical, RectangleHorizontal, Palette
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
@@ -27,6 +28,11 @@ interface MobileToolbarProps {
   onRedo: () => void;
   onSave: () => void;
   onExport: () => void;
+  onSetCanvasSize?: (width: number, height: number) => void;
+  onSetBgColor?: (color: string) => void;
+  canvasWidth?: number;
+  canvasHeight?: number;
+  bgColor?: string;
   canUndo: boolean;
   canRedo: boolean;
   uploading: boolean;
@@ -47,6 +53,11 @@ export const MobileToolbar = memo(function MobileToolbar({
   onRedo,
   onSave,
   onExport,
+  onSetCanvasSize,
+  onSetBgColor,
+  canvasWidth = 1080,
+  canvasHeight = 1080,
+  bgColor = '#0a0f0f',
   canUndo,
   canRedo,
   uploading: _uploading,
@@ -58,7 +69,7 @@ export const MobileToolbar = memo(function MobileToolbar({
   const [addMenuOpen, setAddMenuOpen] = useState(false);
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 safe-area-bottom"
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-[60] safe-area-bottom"
       style={{
         opacity: gestureActive ? 0.3 : 1,
         transition: 'opacity 150ms ease',
@@ -92,11 +103,49 @@ export const MobileToolbar = memo(function MobileToolbar({
       {moreOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-          <div className="absolute bottom-full right-3 mb-2 z-50 bg-surface border border-border rounded-xl shadow-modal p-2 animate-fade-in min-w-[160px]">
+          <div className="absolute bottom-full right-3 mb-2 z-50 bg-surface/95 backdrop-blur-md border border-border/50 rounded-xl shadow-modal p-2 animate-fade-in min-w-[180px]">
             <PopoverButton icon={LayoutTemplate} label="Templates" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
             <PopoverButton icon={Image} label="Library" onClick={() => { onOpenLibrary(); setMoreOpen(false); }} />
             <PopoverButton icon={Upload} label="Upload" onClick={() => { onUpload(); setMoreOpen(false); }} />
             <PopoverButton icon={Sliders} label="Adjustments" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} />
+            <div className="h-px bg-border my-1" />
+            {/* Canvas size shortcuts */}
+            {onSetCanvasSize && (
+              <div className="flex items-center gap-1 px-3 py-1.5">
+                <span className="text-xs text-text-muted mr-auto">Size</span>
+                {([
+                  { w: 1080, h: 1080, icon: Square, label: '1:1' },
+                  { w: 1080, h: 1350, icon: RectangleVertical, label: '4:5' },
+                  { w: 1080, h: 1920, icon: RectangleVertical, label: '9:16' },
+                  { w: 1920, h: 1080, icon: RectangleHorizontal, label: '16:9' },
+                ] as const).map(({ w, h, icon: SIcon, label: sLabel }) => (
+                  <button
+                    key={sLabel}
+                    onClick={() => { onSetCanvasSize(w, h); }}
+                    className={`p-1.5 rounded transition-colors ${
+                      canvasWidth === w && canvasHeight === h
+                        ? 'bg-primary text-white'
+                        : 'text-text-muted hover:bg-surface-hover'
+                    }`}
+                    aria-label={sLabel}
+                  >
+                    <SIcon size={14} className={sLabel === '9:16' ? 'scale-y-125' : ''} />
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Background color */}
+            {onSetBgColor && (
+              <div className="flex items-center gap-2 px-3 py-1.5">
+                <span className="text-xs text-text-muted mr-auto">BG</span>
+                <input
+                  type="color"
+                  value={bgColor}
+                  onChange={(e) => onSetBgColor(e.target.value)}
+                  className="w-7 h-7 rounded cursor-pointer border border-border"
+                />
+              </div>
+            )}
             <div className="h-px bg-border my-1" />
             <PopoverButton icon={Undo2} label="Undo" onClick={() => { onUndo(); setMoreOpen(false); }} disabled={!canUndo} />
             <PopoverButton icon={Redo2} label="Redo" onClick={() => { onRedo(); setMoreOpen(false); }} disabled={!canRedo} />
@@ -106,7 +155,7 @@ export const MobileToolbar = memo(function MobileToolbar({
       )}
 
       {/* Main toolbar — single row, anchored to bottom */}
-      <div className="flex items-center justify-between px-3 py-2 bg-surface border-t border-border">
+      <div className="flex items-center justify-around px-2 py-2 bg-surface/90 backdrop-blur-md border-t border-border/50">
         <ToolButton icon={Plus} label="Add" onClick={() => setAddMenuOpen(!addMenuOpen)} active={addMenuOpen} />
         <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
         <ToolButton
