@@ -28,7 +28,7 @@ interface UseElementInteractionOptions {
 type DragState =
   | { type: 'pending'; id: string; startX: number; startY: number; startTime: number }
   | { type: 'move'; id: string; offsetX: number; offsetY: number; currentX: number; currentY: number }
-  | { type: 'resize'; id: string; handle: string; startX: number; startY: number; startWidth: number; startLayerX: number; currentWidth: number; currentLayerX: number }
+  | { type: 'resize'; id: string; handle: string; startX: number; startY: number; startWidth: number; startFontSize: number; startLayerX: number; currentWidth: number; currentFontSize: number; currentLayerX: number }
   | { type: 'rotate'; id: string; centerX: number; centerY: number; startAngle: number; currentRotation: number }
   | null;
 
@@ -248,14 +248,20 @@ export function useElementInteraction({
         newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
         newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
 
-        // Direct DOM update for width + position
+        // Scale fontSize proportionally with width
+        const scale = newWidth / drag.startWidth;
+        const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
+
+        // Direct DOM update for width + position + fontSize
         const el = findLayerElement(contentRef, drag.id);
         if (el) {
           el.style.width = `${newWidth}px`;
+          el.style.fontSize = `${newFontSize}px`;
           applyPositionToDOM(el, newX, layer.y, layer.rotation || undefined);
         }
 
         drag.currentWidth = newWidth;
+        drag.currentFontSize = newFontSize;
         drag.currentLayerX = newX;
       }
 
@@ -292,7 +298,7 @@ export function useElementInteraction({
       if (drag?.type === 'move') {
         onUpdateLayer(drag.id, { x: drag.currentX, y: drag.currentY });
       } else if (drag?.type === 'resize') {
-        onUpdateLayer(drag.id, { width: drag.currentWidth, x: drag.currentLayerX });
+        onUpdateLayer(drag.id, { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX });
       } else if (drag?.type === 'rotate') {
         onUpdateLayer(drag.id, { rotation: drag.currentRotation });
       }
@@ -342,8 +348,10 @@ export function useElementInteraction({
         startX: x,
         startY: y,
         startWidth: layer.width,
+        startFontSize: layer.fontSize,
         startLayerX: layer.x,
         currentWidth: layer.width,
+        currentFontSize: layer.fontSize,
         currentLayerX: layer.x,
       };
     }
@@ -371,13 +379,19 @@ export function useElementInteraction({
         newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
         newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
 
+        // Scale fontSize proportionally with width
+        const scale = newWidth / drag.startWidth;
+        const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
+
         const el = findLayerElement(contentRef, drag.id);
         if (el) {
           el.style.width = `${newWidth}px`;
+          el.style.fontSize = `${newFontSize}px`;
           applyPositionToDOM(el, newX, layer.y, layer.rotation || undefined);
         }
 
         drag.currentWidth = newWidth;
+        drag.currentFontSize = newFontSize;
         drag.currentLayerX = newX;
       }
 
@@ -409,7 +423,7 @@ export function useElementInteraction({
 
       // Commit to React state
       if (drag?.type === 'resize') {
-        onUpdateLayer(drag.id, { width: drag.currentWidth, x: drag.currentLayerX });
+        onUpdateLayer(drag.id, { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX });
       } else if (drag?.type === 'rotate') {
         onUpdateLayer(drag.id, { rotation: drag.currentRotation });
       }

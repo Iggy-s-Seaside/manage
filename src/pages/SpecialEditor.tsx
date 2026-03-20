@@ -13,6 +13,7 @@ import { LayerPanel } from '../components/editor/LayerPanel';
 import { ImageLibrary } from '../components/editor/ImageLibrary';
 import { ImageAdjustments } from '../components/editor/ImageAdjustments';
 import { MobileToolbar } from '../components/editor/MobileToolbar';
+import { MobileFilterBar } from '../components/editor/MobileFilterBar';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { Modal, ConfirmDialog } from '../components/ui/Modal';
 import { useEditorState } from '../hooks/useEditorState';
@@ -69,6 +70,7 @@ export function SpecialEditor() {
   const [exportQuality, setExportQuality] = useState(92);
   const [currentScale, setCurrentScale] = useState(1);
   const [isGesturing, setIsGesturing] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [customSizeOpen, setCustomSizeOpen] = useState(false);
   const [customWidth, setCustomWidth] = useState(1080);
   const [customHeight, setCustomHeight] = useState(1080);
@@ -788,7 +790,7 @@ export function SpecialEditor() {
         onUpload={() => bgInputRef.current?.click()}
         onOpenLayers={() => setMobileSheet('layers')}
         onOpenProperties={() => setMobileSheet('properties')}
-        onOpenAdjustments={() => setMobileSheet('adjustments')}
+        onOpenAdjustments={() => { setMobileFiltersOpen(true); setMobileSheet(null); }}
         onOpenTemplates={() => setMobileSheet('templates')}
         onUndo={() => dispatch({ type: 'UNDO' })}
         onRedo={() => dispatch({ type: 'REDO' })}
@@ -844,18 +846,16 @@ export function SpecialEditor() {
         )}
       </BottomSheet>
 
-      <BottomSheet
-        open={mobileSheet === 'adjustments'}
-        onClose={() => setMobileSheet(null)}
-        title="Image Adjustments"
-      >
-        <ImageAdjustments
+      {/* Mobile floating filter bar — overlays canvas for real-time preview */}
+      {mobileFiltersOpen && (
+        <MobileFilterBar
           filters={state.imageFilters}
           hasBackground={!!state.backgroundImage}
           onUpdate={(filters) => dispatch({ type: 'SET_IMAGE_FILTERS', filters })}
           onReset={() => dispatch({ type: 'RESET_IMAGE_FILTERS' })}
+          onClose={() => setMobileFiltersOpen(false)}
         />
-      </BottomSheet>
+      )}
 
       {/* Image Library Drawer */}
       <ImageLibrary
