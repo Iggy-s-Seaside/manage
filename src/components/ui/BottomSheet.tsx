@@ -105,8 +105,19 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     // Make the slider thumb larger for easier touch
     clone.style.cssText = 'height: 24px; cursor: pointer;';
 
+    // React ignores programmatic .value assignment + native events.
+    // We must use the native HTMLInputElement value setter to trick React
+    // into recognizing the change through its synthetic event system.
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype, 'value'
+    )?.set;
+
     const syncToOriginal = () => {
-      original.value = clone.value;
+      if (nativeSetter) {
+        nativeSetter.call(original, clone.value);
+      } else {
+        original.value = clone.value;
+      }
       original.dispatchEvent(new Event('input', { bubbles: true }));
       original.dispatchEvent(new Event('change', { bubbles: true }));
       setActiveSliderValue(clone.value);
