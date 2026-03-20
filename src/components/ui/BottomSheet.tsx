@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useState, type ReactNode } from 'react';
-import { X, ChevronLeft } from 'lucide-react';
+import { X, ChevronLeft, Check } from 'lucide-react';
 
 interface BottomSheetProps {
   open: boolean;
@@ -14,7 +14,8 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
   const contentRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ startY: 0, isDragging: false });
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  // Slider peek-through: when a slider is being dragged, collapse sheet to show canvas
+
+  // Slider peek-through state
   const [sliderActive, setSliderActive] = useState(false);
   const [activeSliderLabel, setActiveSliderLabel] = useState('');
   const [activeSliderValue, setActiveSliderValue] = useState('');
@@ -25,11 +26,17 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (sliderActive) {
+          setSliderActive(false);
+        } else {
+          onClose();
+        }
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  }, [open, onClose, sliderActive]);
 
   // Prevent body scroll when open
   useEffect(() => {
@@ -41,22 +48,19 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  // Detect keyboard open/close via visualViewport resize
+  // Detect keyboard via visualViewport
   useEffect(() => {
     if (!open) return;
     const vv = window.visualViewport;
     if (!vv) return;
-
     const handleResize = () => {
-      const isKeyboard = vv.height < window.innerHeight * 0.75;
-      setKeyboardVisible(isKeyboard);
+      setKeyboardVisible(vv.height < window.innerHeight * 0.75);
     };
-
     vv.addEventListener('resize', handleResize);
     return () => vv.removeEventListener('resize', handleResize);
   }, [open]);
 
-  // Slider peek-through: detect range input interactions via event delegation
+  // Detect slider touch start via event delegation — enters peek mode
   useEffect(() => {
     if (!open || !contentRef.current) return;
     const content = contentRef.current;
@@ -67,7 +71,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
 
       activeSliderRef.current = target;
 
-      // Find the label for this slider — look for a preceding label or parent's label
+      // Walk up to find the label
       const parent = target.closest('div');
       const label = parent?.querySelector('label')?.textContent
         || parent?.parentElement?.querySelector('label')?.textContent
@@ -78,54 +82,29 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
       setSliderActive(true);
     };
 
-    const handleSliderMove = (e: Event) => {
-      if (!activeSliderRef.current) return;
-      const target = e.target as HTMLInputElement;
-      if (target === activeSliderRef.current) {
-        setActiveSliderValue(target.value);
-      }
-    };
-
-    const handleSliderEnd = () => {
-      if (!activeSliderRef.current) return;
-      activeSliderRef.current = null;
-      setSliderActive(false);
-    };
-
-    // Use pointer events for broader compatibility
     content.addEventListener('pointerdown', handleSliderStart, { passive: true });
-    content.addEventListener('input', handleSliderMove, { passive: true });
-    content.addEventListener('pointerup', handleSliderEnd, { passive: true });
-    content.addEventListener('pointercancel', handleSliderEnd, { passive: true });
-    // Also listen on window for pointerup in case finger leaves the element
-    window.addEventListener('pointerup', handleSliderEnd, { passive: true });
-
     return () => {
       content.removeEventListener('pointerdown', handleSliderStart);
-      content.removeEventListener('input', handleSliderMove);
-      content.removeEventListener('pointerup', handleSliderEnd);
-      content.removeEventListener('pointercancel', handleSliderEnd);
-      window.removeEventListener('pointerup', handleSliderEnd);
     };
   }, [open]);
 
-  // When slider is active, clone & sync the range input into the floating bar
+  // Build the floating slider clone when peek mode activates
   useEffect(() => {
     if (!sliderActive || !activeSliderRef.current || !floatingSliderRef.current) return;
 
     const original = activeSliderRef.current;
     const container = floatingSliderRef.current;
 
-    // Create a synced range input in the floating bar
     const clone = document.createElement('input');
     clone.type = 'range';
     clone.min = original.min;
     clone.max = original.max;
     clone.step = original.step || 'any';
     clone.value = original.value;
-    clone.className = 'flex-1 accent-primary h-2';
+    clone.className = 'flex-1 accent-primary h-6';
+    // Make the slider thumb larger for easier touch
+    clone.style.cssText = 'height: 24px; cursor: pointer;';
 
-    // Two-way sync: moving the floating slider updates the original
     const syncToOriginal = () => {
       original.value = clone.value;
       original.dispatchEvent(new Event('input', { bubbles: true }));
@@ -134,9 +113,6 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     };
 
     clone.addEventListener('input', syncToOriginal);
-    clone.addEventListener('pointerup', () => {
-      setSliderActive(false);
-    });
 
     container.innerHTML = '';
     container.appendChild(clone);
@@ -147,7 +123,13 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     };
   }, [sliderActive]);
 
-  // Drag-to-close — only from the handle area
+  // "Done" — exit peek mode back to full sheet
+  const handleSliderDone = useCallback(() => {
+    activeSliderRef.current = null;
+    setSliderActive(false);
+  }, []);
+
+  // Drag-to-close
   const handleDragStart = useCallback((e: React.TouchEvent) => {
     dragRef.current.startY = e.touches[0].clientY;
     dragRef.current.isDragging = true;
@@ -166,14 +148,12 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     dragRef.current.isDragging = false;
     const deltaY = e.changedTouches[0].clientY - dragRef.current.startY;
     sheetRef.current.style.transform = '';
-    if (deltaY > 100) {
-      onClose();
-    }
+    if (deltaY > 100) onClose();
   }, [onClose]);
 
   if (!open) return null;
 
-  // Format the slider value for display
+  // Format value for display
   const displayValue = (() => {
     const num = Number(activeSliderValue);
     if (isNaN(num)) return activeSliderValue;
@@ -182,39 +162,49 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
 
   return (
     <div className="fixed inset-0 z-[70] lg:hidden">
-      {/* Backdrop — transparent when slider is active so canvas is visible */}
+      {/* Backdrop */}
       <div
-        className="absolute inset-0 animate-fade-in transition-colors duration-200"
+        className="absolute inset-0 animate-fade-in transition-all duration-200"
         style={{
-          backgroundColor: sliderActive ? 'transparent' : 'rgba(0,0,0,0.6)',
+          backgroundColor: sliderActive ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.6)',
         }}
-        onClick={sliderActive ? undefined : onClose}
+        onClick={sliderActive ? handleSliderDone : onClose}
       />
 
-      {/* Floating slider bar — visible only when slider is active */}
+      {/* ─── Floating slider bar (peek mode) ─── */}
       {sliderActive && (
         <div
-          className="absolute bottom-0 left-0 right-0 z-[80] safe-area-bottom animate-fade-in"
+          className="absolute bottom-0 left-0 right-0 z-[80] safe-area-bottom"
           style={{ pointerEvents: 'auto' }}
         >
-          <div className="mx-3 mb-3 px-4 py-3 rounded-2xl bg-surface/85 backdrop-blur-xl border border-border/30 shadow-modal">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+          <div className="mx-3 mb-3 rounded-2xl bg-surface/90 backdrop-blur-xl border border-border/30 shadow-modal overflow-hidden">
+            {/* Label + value + Done button */}
+            <div className="flex items-center gap-3 px-4 pt-3 pb-1">
+              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider flex-1">
                 {activeSliderLabel || 'Adjust'}
               </span>
-              <span className="text-sm font-bold text-primary tabular-nums">
+              <span className="text-lg font-bold text-primary tabular-nums min-w-[3ch] text-right">
                 {displayValue}
               </span>
+              <button
+                onClick={handleSliderDone}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-white text-sm font-semibold ml-2 active:scale-95 transition-transform"
+              >
+                <Check size={16} />
+                Done
+              </button>
             </div>
+
+            {/* Slider — large touch target */}
             <div
               ref={floatingSliderRef}
-              className="flex items-center"
+              className="flex items-center px-4 py-4"
             />
           </div>
         </div>
       )}
 
-      {/* Full-screen sheet — hidden when slider is active */}
+      {/* ─── Full-screen sheet ─── */}
       <div
         ref={sheetRef}
         className="absolute inset-x-0 bottom-0 top-0 bg-surface flex flex-col animate-sheet-up"
@@ -228,7 +218,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
           pointerEvents: sliderActive ? 'none' : 'auto',
         }}
       >
-        {/* Header with close */}
+        {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border shrink-0">
           <button
             onClick={onClose}
@@ -259,7 +249,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
           <div className="w-10 h-1 rounded-full bg-border" />
         </div>
 
-        {/* Content — fills remaining space, scrollable */}
+        {/* Content */}
         <div
           ref={contentRef}
           className="flex-1 overflow-y-auto overscroll-contain p-4 pb-20"
