@@ -15,14 +15,6 @@ const TEXT_PRESETS = [
   { label: 'Divider', overrides: { elementType: 'divider' as const, text: 'SECTION', dividerLabel: 'SECTION', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.4, dividerLineThickness: 1, dividerPadding: 40, dividerGap: 16, width: 1080 } },
 ];
 
-const GLASS_STYLE = {
-  background: 'rgba(30, 30, 30, 0.72)',
-  backdropFilter: 'blur(20px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
-} as const;
-
 interface MobileToolbarProps {
   onAddText: (overrides?: Partial<TextLayer>) => void;
   onOpenLibrary: () => void;
@@ -57,88 +49,75 @@ export const MobileToolbar = memo(function MobileToolbar({
   onExport,
   canUndo,
   canRedo,
-  uploading,
+  uploading: _uploading,
   hasSelection,
   activeSheet,
   gestureActive = false,
 }: MobileToolbarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
 
   return (
-    <div
-      className="md:hidden fixed z-40"
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 safe-area-bottom"
       style={{
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
-        left: '50%',
-        transform: 'translateX(-50%)',
         opacity: gestureActive ? 0.3 : 1,
         transition: 'opacity 150ms ease',
       }}
     >
-      {/* Preset strip — floating above the main pill */}
-      <div
-        className="flex items-center gap-1.5 px-2 py-1.5 mb-2 overflow-x-auto scrollbar-hide rounded-2xl"
-        style={{
-          ...GLASS_STYLE,
-          maxWidth: '92vw',
-        }}
-      >
-        <button
-          onClick={() => onAddText()}
-          className="flex items-center gap-1.5 shrink-0 px-3 min-h-[44px] rounded-full bg-primary text-white text-[13px] font-medium active:scale-[0.92] transition-transform"
-        >
-          <Plus size={12} /> Text
-        </button>
-        {TEXT_PRESETS.map((preset) => (
-          <button
-            key={preset.label}
-            onClick={() => onAddText(preset.overrides as Partial<TextLayer>)}
-            className="shrink-0 px-3 min-h-[44px] rounded-full text-text-secondary text-[13px] font-medium transition-all active:scale-[0.92]"
-            style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-            }}
-          >
-            {preset.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Main toolbar pill */}
-      <div className="relative">
-        {/* More popover — less-frequent actions */}
-        {moreOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-            <div
-              className="absolute bottom-full right-0 mb-2 z-50 rounded-2xl p-1.5 flex gap-1 animate-fade-in"
-              style={GLASS_STYLE}
+      {/* Add element popover */}
+      {addMenuOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setAddMenuOpen(false)} />
+          <div className="absolute bottom-full left-3 mb-2 z-50 bg-surface border border-border rounded-xl shadow-modal p-2 animate-fade-in">
+            <button
+              onClick={() => { onAddText(); setAddMenuOpen(false); }}
+              className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
             >
-              <ToolButton icon={LayoutTemplate} label="Tmpl" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
-              <ToolButton icon={Image} label="Library" onClick={() => { onOpenLibrary(); setMoreOpen(false); }} />
-              <ToolButton icon={Sliders} label="Adjust" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} highlighted={activeSheet === 'adjustments'} />
-              <ToolButton icon={Undo2} label="Undo" onClick={() => { onUndo(); setMoreOpen(false); }} disabled={!canUndo} />
-              <ToolButton icon={Redo2} label="Redo" onClick={() => { onRedo(); setMoreOpen(false); }} disabled={!canRedo} />
-              <ToolButton icon={Download} label="Export" onClick={() => { onExport(); setMoreOpen(false); }} />
-            </div>
-          </>
-        )}
+              <Plus size={16} className="text-primary" /> Plain Text
+            </button>
+            {TEXT_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => { onAddText(preset.overrides as Partial<TextLayer>); setAddMenuOpen(false); }}
+                className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-text-secondary hover:bg-surface-hover rounded-lg transition-colors"
+              >
+                <span className="w-4" /> {preset.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
-        <div
-          className="flex items-center justify-around px-2 py-1 rounded-full"
-          style={GLASS_STYLE}
-        >
-          <ToolButton icon={Upload} label="Upload" onClick={onUpload} loading={uploading} />
-          <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
-          <ToolButton
-            icon={SlidersHorizontal}
-            label="Props"
-            onClick={onOpenProperties}
-            active={hasSelection}
-            highlighted={activeSheet === 'properties'}
-          />
-          <ToolButton icon={Save} label="Save" onClick={onSave} primary />
-          <ToolButton icon={MoreHorizontal} label="More" onClick={() => setMoreOpen(!moreOpen)} active={moreOpen} />
-        </div>
+      {/* More popover */}
+      {moreOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+          <div className="absolute bottom-full right-3 mb-2 z-50 bg-surface border border-border rounded-xl shadow-modal p-2 animate-fade-in min-w-[160px]">
+            <PopoverButton icon={LayoutTemplate} label="Templates" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
+            <PopoverButton icon={Image} label="Library" onClick={() => { onOpenLibrary(); setMoreOpen(false); }} />
+            <PopoverButton icon={Upload} label="Upload" onClick={() => { onUpload(); setMoreOpen(false); }} />
+            <PopoverButton icon={Sliders} label="Adjustments" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} />
+            <div className="h-px bg-border my-1" />
+            <PopoverButton icon={Undo2} label="Undo" onClick={() => { onUndo(); setMoreOpen(false); }} disabled={!canUndo} />
+            <PopoverButton icon={Redo2} label="Redo" onClick={() => { onRedo(); setMoreOpen(false); }} disabled={!canRedo} />
+            <PopoverButton icon={Download} label="Export" onClick={() => { onExport(); setMoreOpen(false); }} />
+          </div>
+        </>
+      )}
+
+      {/* Main toolbar — single row, anchored to bottom */}
+      <div className="flex items-center justify-between px-3 py-2 bg-surface border-t border-border">
+        <ToolButton icon={Plus} label="Add" onClick={() => setAddMenuOpen(!addMenuOpen)} active={addMenuOpen} />
+        <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
+        <ToolButton
+          icon={SlidersHorizontal}
+          label="Edit"
+          onClick={onOpenProperties}
+          active={hasSelection}
+          highlighted={activeSheet === 'properties'}
+        />
+        <ToolButton icon={Save} label="Save" onClick={onSave} primary />
+        <ToolButton icon={MoreHorizontal} label="More" onClick={() => setMoreOpen(!moreOpen)} active={moreOpen} />
       </div>
     </div>
   );
@@ -170,20 +149,45 @@ function ToolButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`flex items-center justify-center rounded-full transition-all active:scale-[0.92] ${
+      className={`flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors min-h-[44px] min-w-[44px] px-2 ${
         highlighted
-          ? 'text-primary bg-primary/15'
+          ? 'text-primary bg-primary/10'
           : primary
           ? 'text-primary'
           : active
-          ? 'text-primary bg-primary/10'
+          ? 'text-primary'
           : disabled
           ? 'text-text-muted opacity-30'
-          : 'text-text-muted hover:text-text-secondary'
+          : 'text-text-muted'
       }`}
-      style={{ width: 44, height: 44 }}
     >
-      {loading ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
+      {loading ? <Loader2 size={20} className="animate-spin" /> : <Icon size={20} />}
+      <span className="text-[10px] leading-none font-medium">{label}</span>
+    </button>
+  );
+}
+
+function PopoverButton({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  icon: typeof Plus;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm rounded-lg transition-colors ${
+        disabled ? 'text-text-muted opacity-40' : 'text-text-secondary hover:bg-surface-hover'
+      }`}
+    >
+      <Icon size={16} />
+      {label}
     </button>
   );
 }

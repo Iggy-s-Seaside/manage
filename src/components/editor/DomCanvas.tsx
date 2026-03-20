@@ -56,10 +56,15 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
       if (!viewportRef.current) return;
       const vw = viewportRef.current.clientWidth;
       const vh = viewportRef.current.clientHeight;
-      const padding = 32;
+      const padding = 16;
       const scaleX = (vw - padding) / state.canvasWidth;
       const scaleY = (vh - padding) / state.canvasHeight;
-      const newFit = Math.min(scaleX, scaleY, 1);
+      const isMobile = vw < 768;
+      // On mobile: fill width so text is readable, user can pan vertically
+      // On desktop: fit both dimensions
+      const newFit = isMobile
+        ? Math.min(scaleX, 1)
+        : Math.min(scaleX, scaleY, 1);
       setFitScale(newFit);
     };
 
