@@ -216,6 +216,11 @@ export function useElementInteraction({
           if ('vibrate' in navigator) navigator.vibrate([5, 5, 5]);
         }
 
+        // Clamp to canvas bounds
+        const height = estimateHeight(layer);
+        finalX = Math.max(0, Math.min(finalX, canvasWidth - layer.width));
+        finalY = Math.max(0, Math.min(finalY, canvasHeight - height));
+
         // Direct DOM update — no React re-render
         const el = findLayerElement(contentRef, drag.id);
         if (el) {
@@ -238,6 +243,10 @@ export function useElementInteraction({
           newWidth = Math.max(50, Math.round(drag.startWidth - deltaX));
           newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
         }
+
+        // Clamp to canvas bounds
+        newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
+        newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
 
         // Direct DOM update for width + position
         const el = findLayerElement(contentRef, drag.id);
@@ -357,6 +366,10 @@ export function useElementInteraction({
           newWidth = Math.max(50, Math.round(drag.startWidth - deltaX));
           newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
         }
+
+        // Clamp to canvas bounds
+        newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
+        newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
 
         const el = findLayerElement(contentRef, drag.id);
         if (el) {

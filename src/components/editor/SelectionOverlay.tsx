@@ -33,6 +33,8 @@ const ROTATION_OFFSET = 30;
 
 type HandleId = 'nw' | 'ne' | 'sw' | 'se' | 'rotate';
 
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
 export const SelectionOverlay = memo<SelectionOverlayProps>(({
   layer,
   canvasWidth,
@@ -89,45 +91,49 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
           }}
         />
 
-        {/* Rotation line */}
-        <div
-          className="absolute"
-          style={{
-            left: boxW / 2 - 0.5,
-            top: -ROTATION_OFFSET,
-            width: 1,
-            height: ROTATION_OFFSET,
-            backgroundColor: '#2dd4bf',
-            pointerEvents: 'none',
-          }}
-        />
-
-        {/* Rotation handle */}
-        <div
-          className="absolute pointer-events-auto"
-          style={{
-            left: rotateX - touchSize / 2,
-            top: rotateY - touchSize / 2,
-            width: touchSize,
-            height: touchSize,
-            cursor: 'grab',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          onPointerDown={(e) => onHandlePointerDown(e, 'rotate')}
-        >
+        {/* Rotation line (hidden on touch devices) */}
+        {!isTouchDevice && (
           <div
+            className="absolute"
             style={{
-              width: HANDLE_SIZE,
-              height: HANDLE_SIZE,
-              borderRadius: '50%',
-              backgroundColor: '#fff',
-              border: '2px solid #2dd4bf',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              left: boxW / 2 - 0.5,
+              top: -ROTATION_OFFSET,
+              width: 1,
+              height: ROTATION_OFFSET,
+              backgroundColor: '#2dd4bf',
+              pointerEvents: 'none',
             }}
           />
-        </div>
+        )}
+
+        {/* Rotation handle (hidden on touch devices) */}
+        {!isTouchDevice && (
+          <div
+            className="absolute pointer-events-auto"
+            style={{
+              left: rotateX - touchSize / 2,
+              top: rotateY - touchSize / 2,
+              width: touchSize,
+              height: touchSize,
+              cursor: 'grab',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onPointerDown={(e) => onHandlePointerDown(e, 'rotate')}
+          >
+            <div
+              style={{
+                width: HANDLE_SIZE,
+                height: HANDLE_SIZE,
+                borderRadius: '50%',
+                backgroundColor: '#fff',
+                border: '2px solid #2dd4bf',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              }}
+            />
+          </div>
+        )}
 
         {/* Corner resize handles */}
         {handles.map(({ id, x, y, cursor }) => (
@@ -215,7 +221,7 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
             top: 0,
             width: 1,
             height: canvasHeight,
-            borderLeft: '1px dashed #f43f5e',
+            borderLeft: '1px dashed rgba(45, 212, 191, 0.6)',
             opacity: 0.7,
           }}
         />
@@ -229,7 +235,7 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
             top: y,
             width: canvasWidth,
             height: 1,
-            borderTop: '1px dashed #f43f5e',
+            borderTop: '1px dashed rgba(45, 212, 191, 0.6)',
             opacity: 0.7,
           }}
         />

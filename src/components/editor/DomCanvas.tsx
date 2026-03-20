@@ -26,6 +26,7 @@ interface DomCanvasProps {
   zoomOverride?: number;
   onLayerTapped?: (layer: TextLayer) => void;
   onScaleChange?: (scale: number) => void;
+  onGestureChange?: (active: boolean) => void;
 }
 
 export interface DomCanvasHandle {
@@ -42,6 +43,7 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
   zoomOverride,
   onLayerTapped,
   onScaleChange,
+  onGestureChange,
 }, ref) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -122,6 +124,11 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
   useEffect(() => {
     onScaleChange?.(gestures.currentZoom);
   }, [gestures.currentZoom, onScaleChange]);
+
+  // Report gesture state changes (for toolbar auto-hide)
+  useEffect(() => {
+    onGestureChange?.(gestures.isGesturing);
+  }, [gestures.isGesturing, onGestureChange]);
 
   const handleTextCommit = useCallback((layerId: string, text: string) => {
     onUpdateLayer(layerId, { text });

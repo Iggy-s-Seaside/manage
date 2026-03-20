@@ -70,7 +70,7 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 280 }
       {/* Sheet — 55vh default so users can still see the canvas above */}
       <div
         ref={sheetRef}
-        className="absolute bottom-0 left-0 right-0 bg-surface border-t border-border rounded-t-2xl shadow-modal transition-transform duration-300 ease-out"
+        className="absolute bottom-0 left-0 right-0 bg-surface border-t border-border rounded-t-2xl shadow-modal animate-sheet-up"
         style={{ maxHeight: '55vh' }}
       >
         {/* Drag handle — only this area triggers drag-to-close */}
@@ -86,13 +86,14 @@ export function BottomSheet({ open, onClose, title, children, peekHeight = 280 }
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-text-muted uppercase tracking-wider">Editor</span>
+            <span className="text-xs text-text-muted uppercase tracking-wider">Editor</span>
             <span className="text-text-muted">/</span>
             <h3 className="text-base font-bold text-text-primary">{title}</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-surface-hover text-text-muted transition-colors"
+            className="flex items-center justify-center rounded-lg hover:bg-surface-hover text-text-muted transition-colors"
+            style={{ minWidth: 44, minHeight: 44 }}
           >
             <X size={18} />
           </button>

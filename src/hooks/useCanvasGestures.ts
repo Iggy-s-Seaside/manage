@@ -53,6 +53,7 @@ export function useCanvasGestures({
   const [currentZoom, setCurrentZoom] = useState(baseScale);
   const [currentPanX, setCurrentPanX] = useState(0);
   const [currentPanY, setCurrentPanY] = useState(0);
+  const [isGesturing, setIsGesturing] = useState(false);
 
   // Direct DOM update — 60fps, zero re-renders
   const applyTransform = useCallback(() => {
@@ -188,6 +189,7 @@ export function useCanvasGestures({
       initialPinchDistRef.current = getPointerDistance(p1, p2);
       initialPinchZoomRef.current = zoomRef.current;
       isPanningRef.current = false;
+      setIsGesturing(true);
     } else if (pointersRef.current.length === 1) {
       // Potential pan start (only if no element selected, or 2-finger)
       if (!hasSelectedElement) {
@@ -195,6 +197,7 @@ export function useCanvasGestures({
         lastPanPointRef.current = { x: e.clientX, y: e.clientY };
         velocityRef.current = { x: 0, y: 0 };
         lastMoveTimeRef.current = performance.now();
+        setIsGesturing(true);
       }
     }
   }, [hasSelectedElement, isEditing, animateToReset]);
@@ -274,6 +277,7 @@ export function useCanvasGestures({
         applyTransform();
       }
 
+      setIsGesturing(false);
       // Start momentum if panning (commits state when done)
       if (isPanningRef.current) {
         isPanningRef.current = false;
@@ -295,6 +299,7 @@ export function useCanvasGestures({
   const handlePointerCancel = useCallback((e: React.PointerEvent) => {
     pointersRef.current = pointersRef.current.filter(p => p.id !== e.pointerId);
     isPanningRef.current = false;
+    setIsGesturing(false);
   }, []);
 
   // Cleanup
@@ -306,6 +311,7 @@ export function useCanvasGestures({
     currentZoom,
     currentPanX,
     currentPanY,
+    isGesturing,
     viewportHandlers: {
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,

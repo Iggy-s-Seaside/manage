@@ -30,40 +30,134 @@ const baseLayer: LayerDef = {
 };
 
 export const TEMPLATES: SpecialTemplate[] = [
-  // ── Reference-accurate Happy Hour (1080×1350, 4:5 portrait) ──
+  // ═══════════════════════════════════════════════════════════
+  // PROFESSIONAL TEMPLATES (top of list)
+  // ═══════════════════════════════════════════════════════════
+
+  // ── Happy Hour Pro (three-column price layout, 1080×1350) ──
   {
-    id: 'happy-hour-reference',
-    name: 'Happy Hour Menu',
+    id: 'happy-hour-pro',
+    name: 'Happy Hour',
     category: 'drink',
     backgroundColor: '#0d0a06',
     backgroundGradient: 'linear-gradient(180deg, #1a1008 0%, #0d0a06 40%, #1a1008 70%, #0d0a06 100%)',
     canvasWidth: 1080,
     canvasHeight: 1350,
     defaultLayers: [
-      // Element 1: Title
-      { ...baseLayer, text: 'HAPPY HOUR', x: 0, y: 60, width: 1080, fontFamily: 'Bebas Neue', fontSize: 72, fontWeight: 400, fill: '#2dd4bf', letterSpacing: 2, lineHeight: 1.0, textTransform: 'uppercase' },
-      // Element 2: Subtitle
-      { ...baseLayer, text: 'MONDAY - FRIDAY | 4PM - 6PM', x: 0, y: 148, width: 1080, fontFamily: 'Montserrat', fontSize: 16, fontWeight: 400, fill: '#ffffff', letterSpacing: 3, lineHeight: 1.5, textTransform: 'uppercase', opacity: 0.9 },
-      // Element 3: Drinks section divider
-      { ...baseLayer, elementType: 'divider', text: 'DRINKS', dividerLabel: 'DRINKS', x: 0, y: 210, width: 1080, fontFamily: 'Montserrat', fontSize: 20, fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.4, dividerLineThickness: 1, dividerPadding: 40, dividerGap: 16 },
-      // Element 4: Drink item 1
-      { ...baseLayer, text: '$5 MARGARITAS', x: 0, y: 260, width: 1080, fontFamily: 'Oswald', fontSize: 28, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5, lineHeight: 1.3, textTransform: 'uppercase' },
-      // Element 5: Drink item 2
-      { ...baseLayer, text: '$4 DRAFT BEERS', x: 0, y: 308, width: 1080, fontFamily: 'Oswald', fontSize: 28, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5, lineHeight: 1.3, textTransform: 'uppercase' },
-      // Element 6: Drink item 3
-      { ...baseLayer, text: '$6 HOUSE WINE', x: 0, y: 356, width: 1080, fontFamily: 'Oswald', fontSize: 28, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5, lineHeight: 1.3, textTransform: 'uppercase' },
-      // Element 7: Food section divider
-      { ...baseLayer, elementType: 'divider', text: 'FOOD', dividerLabel: 'FOOD', x: 0, y: 420, width: 1080, fontFamily: 'Montserrat', fontSize: 20, fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.4, dividerLineThickness: 1, dividerPadding: 40, dividerGap: 16 },
-      // Element 8: Food item 1
-      { ...baseLayer, text: '$8 FISH TACOS', x: 0, y: 470, width: 1080, fontFamily: 'Oswald', fontSize: 28, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5, lineHeight: 1.3, textTransform: 'uppercase' },
-      // Element 9: Food item 2
-      { ...baseLayer, text: '$6 LOADED NACHOS', x: 0, y: 518, width: 1080, fontFamily: 'Oswald', fontSize: 28, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5, lineHeight: 1.3, textTransform: 'uppercase' },
-      // Element 10: Food item 3
-      { ...baseLayer, text: '$7 SLIDERS', x: 0, y: 566, width: 1080, fontFamily: 'Oswald', fontSize: 28, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5, lineHeight: 1.3, textTransform: 'uppercase' },
-      // Element 11: Logo
-      { ...baseLayer, text: 'Iggys', x: 0, y: 1250, width: 1080, fontFamily: 'Pacifico', fontSize: 52, fontWeight: 400, fill: '#ffffff', lineHeight: 1.0, textTransform: 'none' },
+      { ...baseLayer, text: 'HAPPY HOUR', x: 0, y: 80, width: 1080, fontFamily: 'Bebas Neue', fontSize: 80, fontWeight: 400, fill: '#2dd4bf', letterSpacing: 3, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'DAILY · 3PM - 5PM', x: 0, y: 175, width: 1080, fontFamily: 'Montserrat', fontSize: 16, fontWeight: 400, fill: 'rgba(255,255,255,0.8)', letterSpacing: 4, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, text: "RAIN OR SHINE, WE'VE GOT THE DEALS", x: 0, y: 210, width: 1080, fontFamily: 'Inter', fontSize: 12, fontWeight: 400, fill: 'rgba(255,255,255,0.4)', letterSpacing: 2, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, elementType: 'divider', text: 'DRINKS', dividerLabel: 'DRINKS', x: 0, y: 275, width: 1080, fontFamily: 'Montserrat', fontSize: 18, fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.3, dividerLineThickness: 1, dividerPadding: 60, dividerGap: 16 },
+      // Three-column price layout
+      { ...baseLayer, text: '$5', x: 160, y: 330, width: 200, fontFamily: 'Bebas Neue', fontSize: 56, fontWeight: 400, fill: '#2dd4bf', letterSpacing: 0, lineHeight: 1.0 },
+      { ...baseLayer, text: 'DRAFTS', x: 160, y: 390, width: 200, fontFamily: 'Oswald', fontSize: 18, fontWeight: 500, fill: '#ffffff', letterSpacing: 2, lineHeight: 1.3, textTransform: 'uppercase' },
+      { ...baseLayer, text: '$5', x: 440, y: 330, width: 200, fontFamily: 'Bebas Neue', fontSize: 56, fontWeight: 400, fill: '#2dd4bf' },
+      { ...baseLayer, text: 'WELLS', x: 440, y: 390, width: 200, fontFamily: 'Oswald', fontSize: 18, fontWeight: 500, fill: '#ffffff', letterSpacing: 2, lineHeight: 1.3, textTransform: 'uppercase' },
+      { ...baseLayer, text: '$3', x: 720, y: 330, width: 200, fontFamily: 'Bebas Neue', fontSize: 56, fontWeight: 400, fill: '#2dd4bf' },
+      { ...baseLayer, text: 'CANS', x: 720, y: 390, width: 200, fontFamily: 'Oswald', fontSize: 18, fontWeight: 500, fill: '#ffffff', letterSpacing: 2, lineHeight: 1.3, textTransform: 'uppercase' },
+      { ...baseLayer, text: '200 S FRANKLIN ST · SEASIDE, OR', x: 0, y: 1220, width: 1080, fontFamily: 'Inter', fontSize: 11, fontWeight: 400, fill: 'rgba(255,255,255,0.35)', letterSpacing: 2, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Iggys', x: 0, y: 1260, width: 1080, fontFamily: 'Pacifico', fontSize: 48, fontWeight: 400, fill: '#ffffff', lineHeight: 1.0, textTransform: 'none' },
     ],
   },
+  // ── Hawaiian Breakfast (1080×1350) ──
+  {
+    id: 'hawaiian-breakfast',
+    name: 'Island Style Breakfast',
+    category: 'food',
+    backgroundColor: '#1a0f05',
+    backgroundGradient: 'linear-gradient(180deg, #1a0f05 0%, #2d1a0a 30%, #1a0f05 60%, #0d0805 100%)',
+    canvasWidth: 1080,
+    canvasHeight: 1350,
+    defaultLayers: [
+      { ...baseLayer, text: 'ISLAND STYLE', x: 0, y: 80, width: 1080, fontFamily: 'Bebas Neue', fontSize: 76, fontWeight: 400, fill: '#f59e0b', letterSpacing: 3, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'BREAKFAST', x: 0, y: 165, width: 1080, fontFamily: 'Bebas Neue', fontSize: 44, fontWeight: 400, fill: 'rgba(255,255,255,0.9)', letterSpacing: 6, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'SUNDAYS · 10AM - 1PM', x: 0, y: 225, width: 1080, fontFamily: 'Montserrat', fontSize: 14, fontWeight: 400, fill: 'rgba(255,255,255,0.6)', letterSpacing: 4, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, elementType: 'divider', text: 'FROM THE ISLANDS', dividerLabel: 'FROM THE ISLANDS', x: 0, y: 290, width: 1080, fontFamily: 'Montserrat', fontSize: 14, fontWeight: 600, fill: '#f59e0b', letterSpacing: 4, dividerLineColor: '#f59e0b', dividerLineOpacity: 0.3, dividerLineThickness: 1, dividerPadding: 60, dividerGap: 16 },
+      { ...baseLayer, text: 'LOCO MOCO', x: 0, y: 345, width: 1080, fontFamily: 'Oswald', fontSize: 32, fontWeight: 500, fill: '#ffffff', letterSpacing: 1, lineHeight: 1.2, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Rice · Hamburger patty · Fried egg · Brown gravy', x: 100, y: 385, width: 880, fontFamily: 'Inter', fontSize: 13, fontWeight: 400, fill: 'rgba(255,255,255,0.55)', letterSpacing: 0.5, lineHeight: 1.5, textTransform: 'none' },
+      { ...baseLayer, text: 'SPAM MUSUBI', x: 0, y: 445, width: 1080, fontFamily: 'Oswald', fontSize: 32, fontWeight: 500, fill: '#ffffff', letterSpacing: 1, lineHeight: 1.2, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Grilled spam · Sushi rice · Nori wrap · Teriyaki glaze', x: 100, y: 485, width: 880, fontFamily: 'Inter', fontSize: 13, fontWeight: 400, fill: 'rgba(255,255,255,0.55)', letterSpacing: 0.5, lineHeight: 1.5, textTransform: 'none' },
+      { ...baseLayer, text: 'Iggys', x: 0, y: 1260, width: 1080, fontFamily: 'Pacifico', fontSize: 48, fontWeight: 400, fill: '#f59e0b', lineHeight: 1.0, textTransform: 'none' },
+    ],
+  },
+  // ── Fish Taco Special (1080×1350) ──
+  {
+    id: 'fish-taco',
+    name: 'Taco Special',
+    category: 'food',
+    backgroundColor: '#0a1a1a',
+    backgroundGradient: 'linear-gradient(180deg, #0a1a1a 0%, #0d2626 40%, #0a1a1a 70%, #060f0f 100%)',
+    canvasWidth: 1080,
+    canvasHeight: 1350,
+    defaultLayers: [
+      { ...baseLayer, text: 'TACO SPECIAL', x: 0, y: 80, width: 1080, fontFamily: 'Bebas Neue', fontSize: 76, fontWeight: 400, fill: '#2dd4bf', letterSpacing: 3, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'FRESH FROM THE PACIFIC', x: 0, y: 170, width: 1080, fontFamily: 'Montserrat', fontSize: 14, fontWeight: 500, fill: 'rgba(255,255,255,0.6)', letterSpacing: 4, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, elementType: 'divider', text: 'TACOS', dividerLabel: 'TACOS', x: 0, y: 235, width: 1080, fontFamily: 'Montserrat', fontSize: 18, fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.3, dividerLineThickness: 1, dividerPadding: 60, dividerGap: 16 },
+      { ...baseLayer, text: 'GRILLED COD TACOS', x: 0, y: 295, width: 1080, fontFamily: 'Oswald', fontSize: 36, fontWeight: 500, fill: '#ffffff', letterSpacing: 1, lineHeight: 1.2, textTransform: 'uppercase' },
+      { ...baseLayer, text: '$18', x: 0, y: 345, width: 1080, fontFamily: 'Bebas Neue', fontSize: 52, fontWeight: 400, fill: '#2dd4bf', letterSpacing: 0, lineHeight: 1.0 },
+      { ...baseLayer, text: 'Two soft shells · Shredded lettuce · Cheddar jack\nRemoulade sauce · Chips & pico de gallo', x: 100, y: 405, width: 880, fontFamily: 'Inter', fontSize: 13, fontWeight: 400, fill: 'rgba(255,255,255,0.55)', letterSpacing: 0.5, lineHeight: 1.6, textTransform: 'none' },
+      { ...baseLayer, elementType: 'divider', text: 'UPGRADES', dividerLabel: 'UPGRADES', x: 0, y: 480, width: 1080, fontFamily: 'Montserrat', fontSize: 14, fontWeight: 600, fill: 'rgba(255,255,255,0.4)', letterSpacing: 4, dividerLineColor: 'rgba(255,255,255,0.15)', dividerLineOpacity: 1, dividerLineThickness: 1, dividerPadding: 100, dividerGap: 16 },
+      { ...baseLayer, text: 'SALMON TACOS · +$4', x: 0, y: 530, width: 1080, fontFamily: 'Oswald', fontSize: 20, fontWeight: 500, fill: 'rgba(255,255,255,0.7)', letterSpacing: 1, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'MAHI MAHI TACOS · +$5', x: 0, y: 565, width: 1080, fontFamily: 'Oswald', fontSize: 20, fontWeight: 500, fill: 'rgba(255,255,255,0.7)', letterSpacing: 1, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'SHRIMP TACOS · +$3', x: 0, y: 600, width: 1080, fontFamily: 'Oswald', fontSize: 20, fontWeight: 500, fill: 'rgba(255,255,255,0.7)', letterSpacing: 1, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Iggys', x: 0, y: 1260, width: 1080, fontFamily: 'Pacifico', fontSize: 48, fontWeight: 400, fill: '#2dd4bf', lineHeight: 1.0, textTransform: 'none' },
+    ],
+  },
+  // ── Alcoholic Slushie (1080×1350) ──
+  {
+    id: 'slushie-hour',
+    name: 'Slushie Hour',
+    category: 'drink',
+    backgroundColor: '#1a0020',
+    backgroundGradient: 'linear-gradient(180deg, #1a0020 0%, #2d0040 30%, #1a0020 60%, #0d0015 100%)',
+    canvasWidth: 1080,
+    canvasHeight: 1350,
+    defaultLayers: [
+      { ...baseLayer, text: 'SLUSHIE', x: 0, y: 80, width: 1080, fontFamily: 'Bebas Neue', fontSize: 88, fontWeight: 400, fill: '#c084fc', letterSpacing: 4, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'HOUR', x: 0, y: 175, width: 1080, fontFamily: 'Bebas Neue', fontSize: 52, fontWeight: 400, fill: 'rgba(255,255,255,0.85)', letterSpacing: 8, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'ALL WEEKEND · WHILE SUPPLIES LAST', x: 0, y: 245, width: 1080, fontFamily: 'Montserrat', fontSize: 13, fontWeight: 500, fill: 'rgba(255,255,255,0.5)', letterSpacing: 3, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, elementType: 'divider', text: 'FLAVORS', dividerLabel: 'FLAVORS', x: 0, y: 305, width: 1080, fontFamily: 'Montserrat', fontSize: 16, fontWeight: 600, fill: '#c084fc', letterSpacing: 4, dividerLineColor: '#c084fc', dividerLineOpacity: 0.3, dividerLineThickness: 1, dividerPadding: 60, dividerGap: 16 },
+      { ...baseLayer, text: 'MANGO MARGARITA SLUSH · $9', x: 0, y: 360, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'FROZEN PALOMA · $9', x: 0, y: 405, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'BERRY VODKA FREEZE · $8', x: 0, y: 450, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'PIÑA COLADA CRUSH · $10', x: 0, y: 495, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'ASK ABOUT OUR MYSTERY FLAVOR', x: 0, y: 570, width: 1080, fontFamily: 'Inter', fontSize: 12, fontWeight: 600, fill: '#c084fc', letterSpacing: 3, textTransform: 'uppercase', opacity: 0.7 },
+      { ...baseLayer, text: 'Iggys', x: 0, y: 1260, width: 1080, fontFamily: 'Pacifico', fontSize: 48, fontWeight: 400, fill: '#c084fc', lineHeight: 1.0, textTransform: 'none' },
+    ],
+  },
+  // ── Late Night Kitchen (1080×1350) ──
+  {
+    id: 'late-night',
+    name: 'Late Night Kitchen',
+    category: 'food',
+    backgroundColor: '#0d0d0d',
+    backgroundGradient: 'linear-gradient(180deg, #0d0d0d 0%, #1a1a1a 30%, #0d0d0d 60%, #000000 100%)',
+    canvasWidth: 1080,
+    canvasHeight: 1350,
+    defaultLayers: [
+      { ...baseLayer, text: 'LATE NIGHT', x: 0, y: 80, width: 1080, fontFamily: 'Bebas Neue', fontSize: 80, fontWeight: 400, fill: '#ef4444', letterSpacing: 3, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'KITCHEN', x: 0, y: 170, width: 1080, fontFamily: 'Bebas Neue', fontSize: 48, fontWeight: 400, fill: 'rgba(255,255,255,0.85)', letterSpacing: 6, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: '9PM - MIDNIGHT · FRI & SAT', x: 0, y: 235, width: 1080, fontFamily: 'Montserrat', fontSize: 14, fontWeight: 400, fill: 'rgba(255,255,255,0.5)', letterSpacing: 4, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, elementType: 'divider', text: 'BITES', dividerLabel: 'BITES', x: 0, y: 300, width: 1080, fontFamily: 'Montserrat', fontSize: 16, fontWeight: 600, fill: '#ef4444', letterSpacing: 4, dividerLineColor: '#ef4444', dividerLineOpacity: 0.3, dividerLineThickness: 1, dividerPadding: 60, dividerGap: 16 },
+      { ...baseLayer, text: 'WINGS · BUFFALO OR TERIYAKI · $12', x: 0, y: 355, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'FISH TACOS · GRILLED COD · $18', x: 0, y: 400, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'DOOGER BURGER · ANGUS · $15', x: 0, y: 445, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'CLAM STRIPS · FRIED GOLDEN · $10', x: 0, y: 490, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'LOADED FRIES · TRUFFLE OIL & PARM · $12', x: 0, y: 535, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'CRAB CAKES · JUMBO LUMP · $18', x: 0, y: 580, width: 1080, fontFamily: 'Oswald', fontSize: 26, fontWeight: 500, fill: '#ffffff', letterSpacing: 0.5 },
+      { ...baseLayer, elementType: 'divider', text: 'DRINKS', dividerLabel: 'DRINKS', x: 0, y: 650, width: 1080, fontFamily: 'Montserrat', fontSize: 16, fontWeight: 600, fill: '#ef4444', letterSpacing: 4, dividerLineColor: '#ef4444', dividerLineOpacity: 0.3, dividerLineThickness: 1, dividerPadding: 60, dividerGap: 16 },
+      { ...baseLayer, text: 'DRAFT BEERS · FROM $5', x: 0, y: 700, width: 1080, fontFamily: 'Oswald', fontSize: 22, fontWeight: 500, fill: 'rgba(255,255,255,0.75)', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'WELL COCKTAILS · $5', x: 0, y: 740, width: 1080, fontFamily: 'Oswald', fontSize: 22, fontWeight: 500, fill: 'rgba(255,255,255,0.75)', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'SHOT SPECIALS · ASK YOUR BARTENDER', x: 0, y: 780, width: 1080, fontFamily: 'Oswald', fontSize: 22, fontWeight: 500, fill: 'rgba(255,255,255,0.75)', letterSpacing: 0.5 },
+      { ...baseLayer, text: "FULL ACCESS TO DOOGER'S MENU", x: 0, y: 850, width: 1080, fontFamily: 'Inter', fontSize: 11, fontWeight: 500, fill: 'rgba(255,255,255,0.3)', letterSpacing: 3, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Iggys', x: 0, y: 1260, width: 1080, fontFamily: 'Pacifico', fontSize: 48, fontWeight: 400, fill: '#ef4444', lineHeight: 1.0, textTransform: 'none' },
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // EXISTING TEMPLATES
+  // ═══════════════════════════════════════════════════════════
+
   // ── Taco Tuesday (1080×1080, square) ──
   {
     id: 'taco-tuesday',

@@ -15,6 +15,14 @@ const TEXT_PRESETS = [
   { label: 'Divider', overrides: { elementType: 'divider' as const, text: 'SECTION', dividerLabel: 'SECTION', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.4, dividerLineThickness: 1, dividerPadding: 40, dividerGap: 16, width: 1080 } },
 ];
 
+const GLASS_STYLE = {
+  background: 'rgba(30, 30, 30, 0.72)',
+  backdropFilter: 'blur(20px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+  border: '1px solid rgba(255, 255, 255, 0.08)',
+  boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
+} as const;
+
 interface MobileToolbarProps {
   onAddText: (overrides?: Partial<TextLayer>) => void;
   onOpenLibrary: () => void;
@@ -32,6 +40,7 @@ interface MobileToolbarProps {
   uploading: boolean;
   hasSelection: boolean;
   activeSheet?: string | null;
+  gestureActive?: boolean;
 }
 
 export const MobileToolbar = memo(function MobileToolbar({
@@ -51,16 +60,32 @@ export const MobileToolbar = memo(function MobileToolbar({
   uploading,
   hasSelection,
   activeSheet,
+  gestureActive = false,
 }: MobileToolbarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface border-t border-border safe-area-bottom">
-      {/* Preset strip — horizontal scroll */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border overflow-x-auto scrollbar-hide">
+    <div
+      className="md:hidden fixed z-40"
+      style={{
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        opacity: gestureActive ? 0.3 : 1,
+        transition: 'opacity 150ms ease',
+      }}
+    >
+      {/* Preset strip — floating above the main pill */}
+      <div
+        className="flex items-center gap-1.5 px-2 py-1.5 mb-2 overflow-x-auto scrollbar-hide rounded-2xl"
+        style={{
+          ...GLASS_STYLE,
+          maxWidth: '92vw',
+        }}
+      >
         <button
           onClick={() => onAddText()}
-          className="flex items-center gap-1.5 shrink-0 px-3 min-h-[44px] rounded-full bg-primary text-white text-[13px] font-medium"
+          className="flex items-center gap-1.5 shrink-0 px-3 min-h-[44px] rounded-full bg-primary text-white text-[13px] font-medium active:scale-[0.92] transition-transform"
         >
           <Plus size={12} /> Text
         </button>
@@ -68,20 +93,26 @@ export const MobileToolbar = memo(function MobileToolbar({
           <button
             key={preset.label}
             onClick={() => onAddText(preset.overrides as Partial<TextLayer>)}
-            className="shrink-0 px-3 min-h-[44px] rounded-full bg-surface-hover text-text-secondary text-[13px] font-medium hover:bg-surface-active transition-colors"
+            className="shrink-0 px-3 min-h-[44px] rounded-full text-text-secondary text-[13px] font-medium transition-all active:scale-[0.92]"
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+            }}
           >
             {preset.label}
           </button>
         ))}
       </div>
 
-      {/* Main toolbar — 5 primary + More */}
+      {/* Main toolbar pill */}
       <div className="relative">
         {/* More popover — less-frequent actions */}
         {moreOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-            <div className="absolute bottom-full right-2 mb-2 z-50 bg-surface border border-border rounded-xl shadow-modal p-2 flex gap-1 animate-fade-in">
+            <div
+              className="absolute bottom-full right-0 mb-2 z-50 rounded-2xl p-1.5 flex gap-1 animate-fade-in"
+              style={GLASS_STYLE}
+            >
               <ToolButton icon={LayoutTemplate} label="Tmpl" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
               <ToolButton icon={Image} label="Library" onClick={() => { onOpenLibrary(); setMoreOpen(false); }} />
               <ToolButton icon={Sliders} label="Adjust" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} highlighted={activeSheet === 'adjustments'} />
@@ -92,7 +123,10 @@ export const MobileToolbar = memo(function MobileToolbar({
           </>
         )}
 
-        <div className="flex items-center justify-around px-3 py-2">
+        <div
+          className="flex items-center justify-around px-2 py-1 rounded-full"
+          style={GLASS_STYLE}
+        >
           <ToolButton icon={Upload} label="Upload" onClick={onUpload} loading={uploading} />
           <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
           <ToolButton
@@ -136,7 +170,7 @@ function ToolButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`flex flex-col items-center justify-center gap-0.5 p-1.5 rounded-lg transition-colors w-12 min-h-[44px] ${
+      className={`flex items-center justify-center rounded-full transition-all active:scale-[0.92] ${
         highlighted
           ? 'text-primary bg-primary/15'
           : primary
@@ -147,9 +181,9 @@ function ToolButton({
           ? 'text-text-muted opacity-30'
           : 'text-text-muted hover:text-text-secondary'
       }`}
+      style={{ width: 44, height: 44 }}
     >
       {loading ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
-      <span className="text-[13px] leading-none">{label}</span>
     </button>
   );
 }

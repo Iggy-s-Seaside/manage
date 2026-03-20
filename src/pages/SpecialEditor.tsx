@@ -68,6 +68,7 @@ export function SpecialEditor() {
   const [exportFormat, setExportFormat] = useState<'png' | 'jpeg'>('png');
   const [exportQuality, setExportQuality] = useState(92);
   const [currentScale, setCurrentScale] = useState(1);
+  const [isGesturing, setIsGesturing] = useState(false);
   const [customSizeOpen, setCustomSizeOpen] = useState(false);
   const [customWidth, setCustomWidth] = useState(1080);
   const [customHeight, setCustomHeight] = useState(1080);
@@ -436,7 +437,7 @@ export function SpecialEditor() {
   }, [dispatch, state.selectedLayerId, state.layers, selectedLayer, handleDuplicate]);
 
   return (
-    <div className="h-[calc(100vh-3rem)] flex flex-col -m-6 lg:-m-8">
+    <div className="h-[calc(100vh-3rem)] flex flex-col -m-6 lg:-m-8 editor-viewport">
       {/* Desktop Toolbar — hidden on mobile (MobileToolbar handles it) */}
       <div className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-surface border-b border-border shrink-0 overflow-x-auto">
         <button onClick={handleBack} className="btn-ghost text-xs py-1.5 px-2" aria-label="Back to specials">
@@ -664,7 +665,19 @@ export function SpecialEditor() {
       </div>
 
       {/* Mobile header — clean: back + title + canvas size + BG color */}
-      <div className="flex md:hidden items-center gap-3 px-4 py-2.5 bg-surface border-b border-border shrink-0">
+      <div
+        className="flex md:hidden items-center gap-3 px-4 shrink-0 fixed top-0 left-0 right-0 z-30"
+        style={{
+          height: 'calc(44px + env(safe-area-inset-top, 0px))',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          background: 'rgba(17, 24, 39, 0.7)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          opacity: isGesturing ? 0.3 : 1,
+          transition: 'opacity 150ms ease',
+        }}
+      >
         <button onClick={handleBack} className="p-1.5 rounded-lg hover:bg-surface-hover" aria-label="Back to specials">
           <ArrowLeft size={18} className="text-text-primary" />
         </button>
@@ -732,7 +745,7 @@ export function SpecialEditor() {
         </div>
 
         {/* Canvas Area — DOM-based canvas with gesture handling */}
-        <div className="flex-1 bg-surface-active pb-24 md:pb-0 overflow-hidden">
+        <div className="flex-1 bg-surface-active pb-28 pt-14 md:pt-0 md:pb-0 overflow-hidden">
           <DomCanvas
             ref={canvasRef}
             state={state}
@@ -742,6 +755,7 @@ export function SpecialEditor() {
             onDeleteLayer={(id) => dispatch({ type: 'REMOVE_LAYER', id })}
             zoomOverride={zoom}
             onScaleChange={setCurrentScale}
+            onGestureChange={setIsGesturing}
             onLayerTapped={() => {
               // Don't auto-open properties on tap — let users drag freely.
               // Properties are auto-opened only when ADDING a new layer from presets.
@@ -824,6 +838,7 @@ export function SpecialEditor() {
         uploading={uploading}
         hasSelection={!!selectedLayer}
         activeSheet={mobileSheet}
+        gestureActive={isGesturing}
       />
 
       {/* Mobile Bottom Sheets */}
