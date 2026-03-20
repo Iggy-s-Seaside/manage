@@ -105,17 +105,21 @@ export const DEFAULT_IMAGE_FILTERS: ImageFilters = {
 
 export interface TextLayer {
   id: string;
+  elementType?: 'text' | 'divider'; // default 'text'
   text: string;
   x: number;
   y: number;
   width: number;
   fontFamily: string;
   fontSize: number;
+  fontWeight: number; // 300-700, default 400
   fill: string;
   fontStyle: string; // 'normal', 'bold', 'italic', 'bold italic'
   textDecoration: string; // '' or 'underline'
+  textTransform: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   align: 'left' | 'center' | 'right';
   letterSpacing: number;
+  lineHeight: number; // unitless multiplier, default 1.3
   rotation: number;
   shadowColor: string;
   shadowBlur: number;
@@ -126,12 +130,20 @@ export interface TextLayer {
   opacity: number;
   locked: boolean;
   visible: boolean;
+  // Divider-specific fields (used when elementType === 'divider')
+  dividerLabel?: string;        // Centered text between lines (e.g. "DRINKS")
+  dividerLineColor?: string;    // Line color, default teal
+  dividerLineOpacity?: number;  // 0-1, default 0.4
+  dividerLineThickness?: number; // px, default 1
+  dividerPadding?: number;       // Horizontal padding from edges, default 40
+  dividerGap?: number;           // Gap between label and lines, default 16
 }
 
 export interface EditorState {
   backgroundImage: string | null;
   backgroundColor: string;
   backgroundGradient?: string;  // CSS gradient string, e.g. 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)'
+  backgroundOverlay?: string;   // CSS color for darkening overlay, e.g. 'rgba(0,0,0,0.4)'
   imageFilters: ImageFilters;
   layers: TextLayer[];
   selectedLayerId: string | null;
@@ -148,6 +160,19 @@ export interface SpecialTemplate {
   canvasWidth: number;
   canvasHeight: number;
   defaultLayers: Omit<TextLayer, 'id'>[];
+}
+
+export interface UserTemplate {
+  id: number;
+  created_at: string;
+  name: string;
+  category: string;
+  canvas_width: number;
+  canvas_height: number;
+  background_color: string;
+  background_gradient: string | null;
+  layers: Omit<TextLayer, 'id'>[];
+  thumbnail_url: string | null;
 }
 
 // ── Media Library ──

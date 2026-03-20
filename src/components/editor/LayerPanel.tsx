@@ -1,4 +1,4 @@
-import { Type, ChevronUp, ChevronDown, Trash2, Copy, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
+import { Type, Minus, ChevronUp, ChevronDown, Trash2, Copy, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
 interface LayerPanelProps {
@@ -57,7 +57,10 @@ export function LayerPanel({
                     </button>
                   )}
 
-                  <Type size={13} className="text-text-muted shrink-0" />
+                  {layer.elementType === 'divider'
+                    ? <Minus size={13} className="text-text-muted shrink-0" />
+                    : <Type size={13} className="text-text-muted shrink-0" />
+                  }
                   <span className="text-xs text-text-primary truncate flex-1">
                     {layer.text || 'Empty'}
                   </span>

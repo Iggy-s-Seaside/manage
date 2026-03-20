@@ -37,25 +37,74 @@ interface CanvasProps {
   onUpdateLayer: (id: string, changes: Partial<TextLayer>) => void;
   zoomOverride?: number;  // Manual zoom override (0.25 to 2)
   onLayerTapped?: (layer: TextLayer) => void; // Called when a layer is tapped on mobile
+  onScaleChange?: (scale: number) => void; // Reports current scale for zoom display
 }
 
 export interface CanvasHandle {
-  exportImage: () => string | null;
+  exportImage: (format?: string, quality?: number) => string | null;
   getScale: () => number;
 }
 
-export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLayer, onUpdateLayer, zoomOverride, onLayerTapped }, ref) => {
+export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLayer, onUpdateLayer, zoomOverride, onLayerTapped, onScaleChange }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [bgLoading, setBgLoading] = useState(false);
-  const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  type DragState =
+    | { type: 'move'; id: string; offsetX: number; offsetY: number }
+    | { type: 'resize'; id: string; handle: 'nw' | 'ne' | 'sw' | 'se'; startX: number; startY: number; startWidth: number; startLayerX: number }
+    | { type: 'rotate'; id: string; centerX: number; centerY: number; startAngle: number }
+    | null;
+  const [dragging, setDragging] = useState<DragState>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [snapLines, setSnapLines] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
   const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [showEditHint, setShowEditHint] = useState(false);
+  const [hoveredHandle, setHoveredHandle] = useState<string | null>(null); // 'nw'|'ne'|'sw'|'se'|'rotate'
+
+  /** Get layer text height for hit testing and handles */
+  const getLayerHeight = useCallback((layer: TextLayer): number => {
+    const lines = layer.text.split('\n');
+    const lineHeight = layer.fontSize * 1.3;
+    return lines.length > 1 ? (lines.length - 1) * lineHeight + layer.fontSize : layer.fontSize;
+  }, []);
+
+  /** Get corner handle positions for a layer (in canvas coords) */
+  const getHandlePositions = useCallback((layer: TextLayer) => {
+    const h = getLayerHeight(layer);
+    return {
+      nw: { x: layer.x - 4, y: layer.y - 4 },
+      ne: { x: layer.x + layer.width + 4, y: layer.y - 4 },
+      sw: { x: layer.x - 4, y: layer.y + h + 8 },
+      se: { x: layer.x + layer.width + 4, y: layer.y + h + 8 },
+    };
+  }, [getLayerHeight]);
+
+  /** Hit test for corner handles — returns handle name or null. Only checks the selected layer. */
+  const hitTestHandle = useCallback((clientX: number, clientY: number): 'nw' | 'ne' | 'sw' | 'se' | 'rotate' | null => {
+    const canvas = canvasRef.current;
+    if (!canvas || !state.selectedLayerId) return null;
+    const layer = state.layers.find(l => l.id === state.selectedLayerId);
+    if (!layer || layer.locked) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (clientX - rect.left) / scale;
+    const y = (clientY - rect.top) / scale;
+    const handles = getHandlePositions(layer);
+    const threshold = 10 / scale; // 10px screen space
+
+    // Check rotation handle (above top center)
+    const rotHandleX = layer.x + layer.width / 2;
+    const rotHandleY = layer.y - 4 - 30; // 30px above selection box
+    if (Math.hypot(x - rotHandleX, y - rotHandleY) <= threshold) return 'rotate';
+
+    for (const [name, pos] of Object.entries(handles) as ['nw' | 'ne' | 'sw' | 'se', { x: number; y: number }][]) {
+      if (Math.hypot(x - pos.x, y - pos.y) <= threshold) return name;
+    }
+    return null;
+  }, [state.selectedLayerId, state.layers, scale, getHandlePositions, getLayerHeight]);
 
   // Wait for fonts to load before trusting canvas text metrics
   useEffect(() => {
@@ -66,6 +115,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
   useEffect(() => {
     if (zoomOverride !== undefined) {
       setScale(zoomOverride);
+      onScaleChange?.(zoomOverride);
       return;
     }
     const resize = () => {
@@ -75,7 +125,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
       // Guard against 0 or negative container dimensions (before layout settles)
       if (containerWidth <= 0 || containerHeight <= 0) return;
       const s = Math.min(containerWidth / state.canvasWidth, containerHeight / state.canvasHeight, 1);
-      setScale(Math.max(s, 0.05)); // Never go below 5%
+      const clamped = Math.max(s, 0.05); // Never go below 5%
+      setScale(clamped);
+      onScaleChange?.(clamped);
     };
     resize();
     // Re-calculate after a brief delay so layout has settled
@@ -337,19 +389,45 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
         ctx.strokeRect(layer.x - 4, layer.y - 4, layer.width + 8, totalTextHeight + 12);
         ctx.setLineDash([]);
 
-        // Corner handles
-        const handles = [
+        // Corner handles (resize)
+        const handleNames: ('nw' | 'ne' | 'sw' | 'se')[] = ['nw', 'ne', 'sw', 'se'];
+        const handlePositions = [
           [layer.x - 4, layer.y - 4],
           [layer.x + layer.width + 4, layer.y - 4],
           [layer.x - 4, layer.y + totalTextHeight + 8],
           [layer.x + layer.width + 4, layer.y + totalTextHeight + 8],
         ];
-        for (const [hx, hy] of handles) {
-          ctx.fillStyle = '#ffffff';
+        for (let hi = 0; hi < handlePositions.length; hi++) {
+          const [hx, hy] = handlePositions[hi];
+          const isHovered = hoveredHandle === handleNames[hi];
+          ctx.fillStyle = isHovered ? '#2dd4bf' : '#ffffff';
           ctx.strokeStyle = '#2dd4bf';
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(hx, hy, 5, 0, Math.PI * 2);
+          ctx.arc(hx, hy, isHovered ? 7 : 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Rotation handle (above top center)
+        if (!layer.locked) {
+          const rotX = layer.x + layer.width / 2;
+          const rotY = layer.y - 4;
+          const rotHandleY = rotY - 30;
+          const isRotHovered = hoveredHandle === 'rotate';
+
+          ctx.strokeStyle = '#2dd4bf';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(rotX, rotY);
+          ctx.lineTo(rotX, rotHandleY);
+          ctx.stroke();
+
+          ctx.fillStyle = isRotHovered ? '#2dd4bf' : '#ffffff';
+          ctx.strokeStyle = '#2dd4bf';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(rotX, rotHandleY, isRotHovered ? 7 : 5, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
         }
@@ -388,7 +466,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
 
       ctx.restore();
     }
-  }, [state, bgImage, editing, snapLines, hoveredLayerId, buildFilterString, renderGradient]);
+  }, [state, bgImage, editing, snapLines, hoveredLayerId, hoveredHandle, buildFilterString, renderGradient]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -399,7 +477,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
 
   useImperativeHandle(ref, () => ({
     getScale: () => scale,
-    exportImage: () => {
+    exportImage: (format = 'image/png', quality = 0.92) => {
       // For export, need crossOrigin on the image
       if (bgImage && !bgImage.crossOrigin) {
         // Re-render with a crossOrigin-enabled image for export
@@ -439,18 +517,18 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
         }
 
         try {
-          return exportCanvas.toDataURL('image/png');
+          return exportCanvas.toDataURL(format, quality);
         } catch {
           // If tainted, fall back to main canvas
           render(false);
-          const dataUrl = canvasRef.current?.toDataURL('image/png') ?? null;
+          const dataUrl = canvasRef.current?.toDataURL(format, quality) ?? null;
           render(true);
           return dataUrl;
         }
       }
 
       render(false);
-      const dataUrl = canvasRef.current?.toDataURL('image/png') ?? null;
+      const dataUrl = canvasRef.current?.toDataURL(format, quality) ?? null;
       render(true);
       return dataUrl;
     },
@@ -480,23 +558,47 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
   }, [state.layers, scale]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Check for handle hit first (resize/rotate)
+    const handle = hitTestHandle(e.clientX, e.clientY);
+    if (handle && state.selectedLayerId) {
+      const layer = state.layers.find(l => l.id === state.selectedLayerId);
+      if (layer && !layer.locked) {
+        const rect = canvasRef.current!.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
+        if (handle === 'rotate') {
+          const h = getLayerHeight(layer);
+          const centerX = layer.x + layer.width / 2;
+          const centerY = layer.y + h / 2;
+          const startAngle = Math.atan2(y - centerY, x - centerX) * 180 / Math.PI;
+          setDragging({ type: 'rotate', id: layer.id, centerX, centerY, startAngle: startAngle - layer.rotation });
+        } else {
+          setDragging({ type: 'resize', id: layer.id, handle, startX: x, startY: y, startWidth: layer.width, startLayerX: layer.x });
+        }
+        return;
+      }
+    }
+
     const hit = hitTest(e.clientX, e.clientY);
     if (hit) {
       onSelectLayer(hit.id);
       setShowEditHint(true);
       setTimeout(() => setShowEditHint(false), 2000);
-      if (hit.locked) return; // Can select but not drag locked layers
+      if (hit.locked) return;
       const rect = canvasRef.current!.getBoundingClientRect();
       const x = (e.clientX - rect.left) / scale;
       const y = (e.clientY - rect.top) / scale;
-      setDragging({ id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y });
+      setDragging({ type: 'move', id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y });
     } else {
       onSelectLayer(null);
       setShowEditHint(false);
     }
-  }, [hitTest, onSelectLayer, scale]);
+  }, [hitTest, hitTestHandle, onSelectLayer, scale, state.selectedLayerId, state.layers, getLayerHeight]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
     // Hover detection (when not dragging)
     if (!dragging) {
       const hit = hitTest(e.clientX, e.clientY);
@@ -504,31 +606,82 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
       if (newHoveredId !== hoveredLayerId) {
         setHoveredLayerId(newHoveredId);
       }
-      // Update cursor
-      const canvas = canvasRef.current;
-      if (canvas) {
-        canvas.style.cursor = hit ? (hit.locked ? 'not-allowed' : 'move') : 'default';
+
+      // Handle hover detection for cursor changes
+      const handle = hitTestHandle(e.clientX, e.clientY);
+      if (handle !== hoveredHandle) {
+        setHoveredHandle(handle);
+      }
+
+      // Update cursor based on handle or layer hover
+      if (handle === 'rotate') {
+        canvas.style.cursor = 'grab';
+      } else if (handle === 'nw' || handle === 'se') {
+        canvas.style.cursor = 'nwse-resize';
+      } else if (handle === 'ne' || handle === 'sw') {
+        canvas.style.cursor = 'nesw-resize';
+      } else if (hit) {
+        canvas.style.cursor = hit.locked ? 'not-allowed' : 'move';
+      } else {
+        canvas.style.cursor = 'default';
       }
       return;
     }
-    const rect = canvasRef.current!.getBoundingClientRect();
+
+    const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scale;
     const y = (e.clientY - rect.top) / scale;
-    const newX = Math.round(x - dragging.offsetX);
-    const newY = Math.round(y - dragging.offsetY);
 
-    const layer = state.layers.find(l => l.id === dragging.id);
-    if (layer) {
-      const snaps = calcSnapLines(dragging.id, newX, newY, layer.width, layer.fontSize);
-      setSnapLines(snaps);
+    if (dragging.type === 'move') {
+      const newX = Math.round(x - dragging.offsetX);
+      const newY = Math.round(y - dragging.offsetY);
+
+      const layer = state.layers.find(l => l.id === dragging.id);
+      if (layer) {
+        const snaps = calcSnapLines(dragging.id, newX, newY, layer.width, layer.fontSize);
+        setSnapLines(snaps);
+      }
+
+      onUpdateLayer(dragging.id, { x: newX, y: newY });
+    } else if (dragging.type === 'resize') {
+      const deltaX = x - dragging.startX;
+      let newWidth: number;
+      let newX: number | undefined;
+
+      if (dragging.handle === 'ne' || dragging.handle === 'se') {
+        // East handles: increase width
+        newWidth = Math.max(50, Math.round(dragging.startWidth + deltaX));
+        onUpdateLayer(dragging.id, { width: newWidth });
+      } else {
+        // West handles: decrease width + shift x
+        newWidth = Math.max(50, Math.round(dragging.startWidth - deltaX));
+        newX = Math.round(dragging.startLayerX + (dragging.startWidth - newWidth));
+        onUpdateLayer(dragging.id, { width: newWidth, x: newX });
+      }
+    } else if (dragging.type === 'rotate') {
+      const rawAngle = Math.atan2(y - dragging.centerY, x - dragging.centerX) * 180 / Math.PI;
+      let angle = rawAngle - dragging.startAngle;
+
+      // Normalize to 0-360
+      angle = ((angle % 360) + 360) % 360;
+
+      // Snap to 45° increments when within 5°
+      const snapAngles = [0, 45, 90, 135, 180, 225, 270, 315, 360];
+      for (const snap of snapAngles) {
+        if (Math.abs(angle - snap) <= 5) {
+          angle = snap === 360 ? 0 : snap;
+          break;
+        }
+      }
+
+      onUpdateLayer(dragging.id, { rotation: Math.round(angle) });
     }
-
-    onUpdateLayer(dragging.id, { x: newX, y: newY });
-  }, [dragging, scale, onUpdateLayer, state.layers, calcSnapLines, hitTest, hoveredLayerId]);
+  }, [dragging, scale, onUpdateLayer, state.layers, calcSnapLines, hitTest, hitTestHandle, hoveredLayerId, hoveredHandle]);
 
   const handleMouseUp = useCallback(() => {
     setDragging(null);
     setSnapLines({ x: [], y: [] });
+    setHoveredHandle(null);
   }, []);
 
   const handleDblClick = useCallback((e: React.MouseEvent) => {
@@ -550,13 +703,18 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
     const textarea = document.createElement('textarea');
     containerRef.current.appendChild(textarea);
 
+    // Enforce minimum 16px font to prevent iOS Safari auto-zoom on focus
+    const scaledFontSize = hit.fontSize * scale;
+    const displayFontSize = Math.max(16, scaledFontSize);
+    const fontScaleRatio = displayFontSize / scaledFontSize;
+
     textarea.value = hit.text;
     textarea.style.position = 'absolute';
     textarea.style.left = `${hit.x * scale + (rect.left - containerRect.left)}px`;
     textarea.style.top = `${hit.y * scale + (rect.top - containerRect.top)}px`;
-    textarea.style.width = `${hit.width * scale + 4}px`;
-    textarea.style.minHeight = `${(hit.fontSize + 8) * scale}px`;
-    textarea.style.fontSize = `${hit.fontSize * scale}px`;
+    textarea.style.width = `${(hit.width * scale + 4) * fontScaleRatio}px`;
+    textarea.style.minHeight = `${(hit.fontSize + 8) * scale * fontScaleRatio}px`;
+    textarea.style.fontSize = `${displayFontSize}px`;
     textarea.style.fontFamily = hit.fontFamily;
     textarea.style.color = hit.fill;
     textarea.style.textAlign = hit.align;
@@ -569,6 +727,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
     textarea.style.zIndex = '100';
     textarea.style.lineHeight = '1.2';
     textarea.style.overflow = 'hidden';
+    // Scale down via transform if we had to bump the font size
+    if (fontScaleRatio > 1) {
+      textarea.style.transformOrigin = 'top left';
+      textarea.style.transform = `scale(${1 / fontScaleRatio})`;
+    }
     textarea.focus();
     textarea.select();
 
@@ -585,7 +748,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
   }, [scale, onSelectLayer, onUpdateLayer]);
 
   // --- Touch event handlers for mobile layer interaction ---
-  const touchDragRef = useRef<{ id: string; offsetX: number; offsetY: number; moved: boolean } | null>(null);
+  type TouchDragState =
+    | { type: 'move'; id: string; offsetX: number; offsetY: number; moved: boolean }
+    | { type: 'resize'; id: string; handle: 'nw' | 'ne' | 'sw' | 'se'; startX: number; startY: number; startWidth: number; startLayerX: number; moved: boolean }
+    | { type: 'rotate'; id: string; centerX: number; centerY: number; startAngle: number; moved: boolean }
+    | null;
+  const touchDragRef = useRef<TouchDragState>(null);
   const lastTapRef = useRef<{ time: number; layerId: string | null }>({ time: 0, layerId: null });
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -593,6 +761,29 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
     if (e.touches.length !== 1) return;
 
     const touch = e.touches[0];
+
+    // Check for handle hit first (resize/rotate)
+    const handle = hitTestHandle(touch.clientX, touch.clientY);
+    if (handle && state.selectedLayerId) {
+      const layer = state.layers.find(l => l.id === state.selectedLayerId);
+      if (layer && !layer.locked) {
+        e.stopPropagation();
+        const rect = canvasRef.current!.getBoundingClientRect();
+        const x = (touch.clientX - rect.left) / scale;
+        const y = (touch.clientY - rect.top) / scale;
+        if (handle === 'rotate') {
+          const h = getLayerHeight(layer);
+          const centerX = layer.x + layer.width / 2;
+          const centerY = layer.y + h / 2;
+          const startAngle = Math.atan2(y - centerY, x - centerX) * 180 / Math.PI;
+          touchDragRef.current = { type: 'rotate', id: layer.id, centerX, centerY, startAngle: startAngle - layer.rotation, moved: false };
+        } else {
+          touchDragRef.current = { type: 'resize', id: layer.id, handle, startX: x, startY: y, startWidth: layer.width, startLayerX: layer.x, moved: false };
+        }
+        return;
+      }
+    }
+
     const hit = hitTest(touch.clientX, touch.clientY);
 
     if (hit) {
@@ -605,12 +796,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
         const rect = canvasRef.current!.getBoundingClientRect();
         const x = (touch.clientX - rect.left) / scale;
         const y = (touch.clientY - rect.top) / scale;
-        touchDragRef.current = { id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y, moved: false };
+        touchDragRef.current = { type: 'move', id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y, moved: false };
       }
     } else {
       onSelectLayer(null);
     }
-  }, [hitTest, onSelectLayer, onLayerTapped, scale]);
+  }, [hitTest, hitTestHandle, onSelectLayer, onLayerTapped, scale, state.selectedLayerId, state.layers, getLayerHeight]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length !== 1 || !touchDragRef.current) return;
@@ -624,16 +815,45 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
     const rect = canvasRef.current!.getBoundingClientRect();
     const x = (touch.clientX - rect.left) / scale;
     const y = (touch.clientY - rect.top) / scale;
-    const newX = Math.round(x - touchDragRef.current.offsetX);
-    const newY = Math.round(y - touchDragRef.current.offsetY);
+    const td = touchDragRef.current;
 
-    const layer = state.layers.find(l => l.id === touchDragRef.current!.id);
-    if (layer) {
-      const snaps = calcSnapLines(touchDragRef.current.id, newX, newY, layer.width, layer.fontSize);
-      setSnapLines(snaps);
+    if (td.type === 'move') {
+      const newX = Math.round(x - td.offsetX);
+      const newY = Math.round(y - td.offsetY);
+
+      const layer = state.layers.find(l => l.id === td.id);
+      if (layer) {
+        const snaps = calcSnapLines(td.id, newX, newY, layer.width, layer.fontSize);
+        setSnapLines(snaps);
+      }
+
+      onUpdateLayer(td.id, { x: newX, y: newY });
+    } else if (td.type === 'resize') {
+      const deltaX = x - td.startX;
+      if (td.handle === 'ne' || td.handle === 'se') {
+        const newWidth = Math.max(50, Math.round(td.startWidth + deltaX));
+        onUpdateLayer(td.id, { width: newWidth });
+      } else {
+        const newWidth = Math.max(50, Math.round(td.startWidth - deltaX));
+        const newX = Math.round(td.startLayerX + (td.startWidth - newWidth));
+        onUpdateLayer(td.id, { width: newWidth, x: newX });
+      }
+    } else if (td.type === 'rotate') {
+      const rawAngle = Math.atan2(y - td.centerY, x - td.centerX) * 180 / Math.PI;
+      let angle = rawAngle - td.startAngle;
+      angle = ((angle % 360) + 360) % 360;
+
+      // Snap to 45° increments when within 5°
+      const snapAngles = [0, 45, 90, 135, 180, 225, 270, 315, 360];
+      for (const snap of snapAngles) {
+        if (Math.abs(angle - snap) <= 5) {
+          angle = snap === 360 ? 0 : snap;
+          break;
+        }
+      }
+
+      onUpdateLayer(td.id, { rotation: Math.round(angle) });
     }
-
-    onUpdateLayer(touchDragRef.current.id, { x: newX, y: newY });
   }, [scale, onUpdateLayer, state.layers, calcSnapLines]);
 
   const handleTouchEnd = useCallback((_e: React.TouchEvent) => {
@@ -642,6 +862,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
     setSnapLines({ x: [], y: [] });
 
     if (!dragInfo || dragInfo.moved) return;
+
+    // Double-tap only applies to move drags (taps on layers)
+    if (dragInfo.type !== 'move') return;
 
     // Detect double-tap on a layer for inline editing
     const now = Date.now();
@@ -688,7 +911,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
           height: state.canvasHeight * scale,
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
           borderRadius: '8px',
-          cursor: dragging ? 'grabbing' : 'default',
+          cursor: dragging ? (dragging.type === 'rotate' ? 'grabbing' : dragging.type === 'resize' ? 'col-resize' : 'grabbing') : 'default',
           touchAction: 'none', // Prevent browser gestures on the canvas
         }}
         onMouseDown={handleMouseDown}
@@ -700,6 +923,25 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ state, onSelectLa
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       />
+
+      {/* Rotation angle label */}
+      {dragging?.type === 'rotate' && (() => {
+        const layer = state.layers.find(l => l.id === dragging.id);
+        if (!layer) return null;
+        return (
+          <div
+            className="absolute pointer-events-none z-20"
+            style={{
+              left: (layer.x + layer.width / 2) * scale - 20,
+              top: (layer.y - 60) * scale,
+            }}
+          >
+            <div className="bg-black/80 text-white text-xs px-2 py-1 rounded font-mono whitespace-nowrap">
+              {layer.rotation}°
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Edit hint tooltip */}
       {showEditHint && state.selectedLayerId && !editing && (

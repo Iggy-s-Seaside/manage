@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Plus, Image, Upload, Layers, Sliders, SlidersHorizontal,
-  Undo2, Redo2, Save, Download, Loader2, MoreHorizontal
+  Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
@@ -9,8 +9,10 @@ import type { TextLayer } from '../../types';
 const TEXT_PRESETS = [
   { label: 'Heading', overrides: { text: 'HEADING', fontSize: 96, fontFamily: 'Bebas Neue', fontStyle: 'bold', fill: '#ffffff', letterSpacing: 4 } },
   { label: 'Subtitle', overrides: { text: 'Subtitle text', fontSize: 36, fontFamily: 'Montserrat', fill: '#94a3b8', letterSpacing: 2 } },
+  { label: 'Item', overrides: { text: '$5 ITEM NAME', fontSize: 36, fontFamily: 'Oswald', fontStyle: 'bold', fill: '#ffffff', align: 'center' as const, letterSpacing: 1 } },
   { label: 'Price', overrides: { text: '$5', fontSize: 72, fontFamily: 'Anton', fill: '#f59e0b', fontStyle: 'bold' } },
   { label: 'CTA', overrides: { text: 'JOIN US!', fontSize: 48, fontFamily: 'Oswald', fill: '#2dd4bf', fontStyle: 'bold', letterSpacing: 3 } },
+  { label: 'Divider', overrides: { elementType: 'divider' as const, text: 'SECTION', dividerLabel: 'SECTION', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.4, dividerLineThickness: 1, dividerPadding: 40, dividerGap: 16, width: 1080 } },
 ];
 
 interface MobileToolbarProps {
@@ -20,6 +22,7 @@ interface MobileToolbarProps {
   onOpenLayers: () => void;
   onOpenProperties: () => void;
   onOpenAdjustments: () => void;
+  onOpenTemplates: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onSave: () => void;
@@ -38,6 +41,7 @@ export function MobileToolbar({
   onOpenLayers,
   onOpenProperties,
   onOpenAdjustments,
+  onOpenTemplates,
   onUndo,
   onRedo,
   onSave,
@@ -78,17 +82,18 @@ export function MobileToolbar({
           <>
             <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
             <div className="absolute bottom-full right-2 mb-2 z-50 bg-surface border border-border rounded-xl shadow-modal p-2 flex gap-1 animate-fade-in">
+              <ToolButton icon={LayoutTemplate} label="Tmpl" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
               <ToolButton icon={Image} label="Library" onClick={() => { onOpenLibrary(); setMoreOpen(false); }} />
-              <ToolButton icon={Upload} label="Upload" onClick={() => { onUpload(); setMoreOpen(false); }} loading={uploading} />
               <ToolButton icon={Sliders} label="Adjust" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} highlighted={activeSheet === 'adjustments'} />
+              <ToolButton icon={Undo2} label="Undo" onClick={() => { onUndo(); setMoreOpen(false); }} disabled={!canUndo} />
+              <ToolButton icon={Redo2} label="Redo" onClick={() => { onRedo(); setMoreOpen(false); }} disabled={!canRedo} />
               <ToolButton icon={Download} label="Export" onClick={() => { onExport(); setMoreOpen(false); }} />
             </div>
           </>
         )}
 
         <div className="flex items-center justify-around px-3 py-2">
-          <ToolButton icon={Undo2} label="Undo" onClick={onUndo} disabled={!canUndo} />
-          <ToolButton icon={Redo2} label="Redo" onClick={onRedo} disabled={!canRedo} />
+          <ToolButton icon={Upload} label="Upload" onClick={onUpload} loading={uploading} />
           <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
           <ToolButton
             icon={SlidersHorizontal}
@@ -128,6 +133,7 @@ function ToolButton({
     <button
       onClick={onClick}
       disabled={disabled}
+      aria-label={label}
       className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors w-12 ${
         highlighted
           ? 'text-primary bg-primary/15'

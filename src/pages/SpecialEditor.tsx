@@ -1,18 +1,20 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, Plus, Undo2, Redo2, Download, Save, Upload, RectangleVertical, Square,
-  Loader2, Image, Sliders, Type, Heading1, Heading2, Tag, Megaphone, ZoomIn, ZoomOut, Maximize
+  ArrowLeft, Plus, Undo2, Redo2, Download, Save, Upload, RectangleVertical, RectangleHorizontal, Square,
+  Loader2, Image, Sliders, Type, Heading1, Heading2, Tag, Megaphone, ZoomIn, ZoomOut, Maximize,
+  LayoutTemplate, Ruler, Minus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Canvas, type CanvasHandle } from '../components/editor/Canvas';
+import { DomCanvas, type DomCanvasHandle } from '../components/editor/DomCanvas';
 import { PropertyPanel } from '../components/editor/PropertyPanel';
 import { LayerPanel } from '../components/editor/LayerPanel';
 import { ImageLibrary } from '../components/editor/ImageLibrary';
 import { ImageAdjustments } from '../components/editor/ImageAdjustments';
 import { MobileToolbar } from '../components/editor/MobileToolbar';
 import { BottomSheet } from '../components/ui/BottomSheet';
-import { Modal } from '../components/ui/Modal';
+import { Modal, ConfirmDialog } from '../components/ui/Modal';
 import { useEditorState } from '../hooks/useEditorState';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { useSupabaseCRUD } from '../hooks/useSupabaseCRUD';
@@ -22,30 +24,34 @@ import { useDraftPersistence } from '../hooks/useDraftPersistence';
 // own internal fit-to-container scaling.  Browser pinch-zoom is blocked via
 // touch-action CSS on the editor container.
 import { TEMPLATES } from '../data/templates';
+import type { Special, TextLayer, UserTemplate } from '../types';
 import { DEFAULT_IMAGE_FILTERS } from '../types';
-import type { Special, TextLayer } from '../types';
 
 // Text presets for quick add
 const TEXT_PRESETS = [
   { label: 'Heading', icon: Heading1, overrides: { text: 'HEADING', fontSize: 96, fontFamily: 'Bebas Neue', fontStyle: 'bold', fill: '#ffffff', letterSpacing: 4 } },
   { label: 'Subtitle', icon: Heading2, overrides: { text: 'Subtitle text', fontSize: 36, fontFamily: 'Montserrat', fill: '#94a3b8', letterSpacing: 2 } },
+  { label: 'Item', icon: Type, overrides: { text: '$5 ITEM NAME', fontSize: 36, fontFamily: 'Oswald', fontStyle: 'bold', fill: '#ffffff', align: 'center' as const, letterSpacing: 1 } },
   { label: 'Price', icon: Tag, overrides: { text: '$5', fontSize: 72, fontFamily: 'Anton', fill: '#f59e0b', fontStyle: 'bold' } },
   { label: 'CTA', icon: Megaphone, overrides: { text: 'JOIN US!', fontSize: 48, fontFamily: 'Oswald', fill: '#2dd4bf', fontStyle: 'bold', letterSpacing: 3 } },
+  { label: 'Divider', icon: Minus, overrides: { elementType: 'divider' as const, text: 'SECTION', dividerLabel: 'SECTION', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.4, dividerLineThickness: 1, dividerPadding: 40, dividerGap: 16, width: 1080 } },
 ];
 
 type RightTab = 'properties' | 'adjustments';
-type MobileSheet = 'layers' | 'properties' | 'adjustments' | null;
+type MobileSheet = 'layers' | 'properties' | 'adjustments' | 'templates' | null;
 
 export function SpecialEditor() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const canvasRef = useRef<CanvasHandle>(null);
+  const canvasRef = useRef<DomCanvasHandle>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
+  const presetsButtonRef = useRef<HTMLButtonElement>(null);
 
   const { state, selectedLayer, canUndo, canRedo, dispatch, addTextLayer } = useEditorState();
   const { upload, uploading } = useImageUpload();
   const { data: specials, create, update } = useSupabaseCRUD<Special>('specials');
+  const { data: userTemplates, create: createTemplate, remove: removeTemplate } = useSupabaseCRUD<UserTemplate>('user_templates');
   // No more CSS-transform zoom wrapper — canvas handles its own scale internally.
 
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -55,6 +61,21 @@ export function SpecialEditor() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<MobileSheet>(null);
   const [zoom, setZoom] = useState<number | undefined>(undefined); // undefined = auto-fit
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'png' | 'jpeg'>('png');
+  const [exportQuality, setExportQuality] = useState(92);
+  const [currentScale, setCurrentScale] = useState(1);
+  const [customSizeOpen, setCustomSizeOpen] = useState(false);
+  const [customWidth, setCustomWidth] = useState(1080);
+  const [customHeight, setCustomHeight] = useState(1080);
+  const customSizeRef = useRef<HTMLButtonElement>(null);
+  const [saveTemplateModalOpen, setSaveTemplateModalOpen] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateForm, setTemplateForm] = useState({ name: '', category: 'drink' });
+  const [deleteTemplateId, setDeleteTemplateId] = useState<number | null>(null);
   const [saveForm, setSaveForm] = useState({
     title: '',
     description: '',
@@ -181,16 +202,18 @@ export function SpecialEditor() {
     toast.success('Background set from library');
   }, [dispatch]);
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback((format: 'png' | 'jpeg' = 'png', quality = 92) => {
     dispatch({ type: 'SELECT_LAYER', id: null });
     setTimeout(() => {
-      const dataUrl = canvasRef.current?.exportImage();
+      const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      const ext = format === 'jpeg' ? 'jpg' : 'png';
+      const dataUrl = canvasRef.current?.exportImage(mimeType, quality / 100);
       if (!dataUrl) return;
       const link = document.createElement('a');
-      link.download = `iggy-special-${Date.now()}.png`;
+      link.download = `iggy-special-${Date.now()}.${ext}`;
       link.href = dataUrl;
       link.click();
-      toast.success('Image exported!');
+      toast.success(`Image exported as ${ext.toUpperCase()}!`);
     }, 100);
   }, [dispatch]);
 
@@ -233,22 +256,148 @@ export function SpecialEditor() {
   };
 
   const handleDuplicate = useCallback((layer: TextLayer) => {
+    const { id: _id, ...rest } = layer;
     addTextLayer({
-      ...layer,
+      ...rest,
       x: layer.x + 20,
       y: layer.y + 20,
-      text: layer.text,
     });
   }, [addTextLayer]);
+
+  // Back navigation with unsaved changes guard
+  const handleBack = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setLeaveConfirmOpen(true);
+    } else {
+      navigate('/specials');
+    }
+  }, [hasUnsavedChanges, navigate]);
+
+  // Load a template into the editor
+  const loadTemplate = useCallback((templateId: string) => {
+    const template = TEMPLATES.find((t) => t.id === templateId);
+    if (!template) return;
+    dispatch({
+      type: 'LOAD_STATE',
+      state: {
+        backgroundImage: null,
+        backgroundColor: template.backgroundColor,
+        backgroundGradient: template.backgroundGradient,
+        imageFilters: { ...DEFAULT_IMAGE_FILTERS },
+        layers: template.defaultLayers.map((l) => ({ ...l, id: crypto.randomUUID(), locked: false, visible: true })),
+        selectedLayerId: null,
+        canvasWidth: template.canvasWidth,
+        canvasHeight: template.canvasHeight,
+      },
+    });
+    setTemplatePickerOpen(false);
+    toast.success(`Loaded "${template.name}" template`);
+  }, [dispatch]);
+
+  const loadUserTemplate = useCallback((template: UserTemplate) => {
+    dispatch({
+      type: 'LOAD_STATE',
+      state: {
+        backgroundImage: null,
+        backgroundColor: template.background_color,
+        backgroundGradient: template.background_gradient ?? undefined,
+        imageFilters: { ...DEFAULT_IMAGE_FILTERS },
+        layers: template.layers.map((l) => ({ ...l, id: crypto.randomUUID(), locked: false, visible: true })),
+        selectedLayerId: null,
+        canvasWidth: template.canvas_width,
+        canvasHeight: template.canvas_height,
+      },
+    });
+    setTemplatePickerOpen(false);
+    setMobileSheet(null);
+    toast.success(`Loaded "${template.name}" template`);
+  }, [dispatch]);
+
+  const handleSaveAsTemplate = useCallback(async () => {
+    if (!templateForm.name.trim()) return;
+    setSavingTemplate(true);
+    dispatch({ type: 'SELECT_LAYER', id: null });
+    await new Promise((r) => setTimeout(r, 150));
+
+    // Export and downscale thumbnail
+    const fullDataUrl = canvasRef.current?.exportImage('image/jpeg', 0.7);
+    let thumbnailUrl: string | null = null;
+    if (fullDataUrl) {
+      try {
+        const img = new window.Image();
+        img.src = fullDataUrl;
+        await new Promise((resolve) => { img.onload = resolve; });
+        const thumbCanvas = document.createElement('canvas');
+        const thumbWidth = 300;
+        const thumbHeight = Math.round((img.height / img.width) * thumbWidth);
+        thumbCanvas.width = thumbWidth;
+        thumbCanvas.height = thumbHeight;
+        const ctx = thumbCanvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, thumbWidth, thumbHeight);
+          const blob = await new Promise<Blob | null>((resolve) => thumbCanvas.toBlob(resolve, 'image/jpeg', 0.8));
+          if (blob) {
+            const file = new File([blob], `template-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            thumbnailUrl = await upload(file, 'templates');
+          }
+        }
+      } catch { /* thumbnail is optional, continue without it */ }
+    }
+
+    // Strip IDs from layers for storage
+    const layersForStorage = state.layers.map(({ id: _id, ...rest }) => rest);
+
+    const ok = await createTemplate({
+      name: templateForm.name.trim(),
+      category: templateForm.category,
+      canvas_width: state.canvasWidth,
+      canvas_height: state.canvasHeight,
+      background_color: state.backgroundColor,
+      background_gradient: state.backgroundGradient ?? null,
+      layers: layersForStorage,
+      thumbnail_url: thumbnailUrl,
+    } as Omit<UserTemplate, 'id' | 'created_at'>);
+
+    setSavingTemplate(false);
+    if (ok) {
+      setSaveTemplateModalOpen(false);
+      setTemplateForm({ name: '', category: 'drink' });
+    }
+  }, [templateForm, state, dispatch, upload, createTemplate]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+      if (e.target instanceof HTMLElement && e.target.isContentEditable) return;
+
+      const mod = e.metaKey || e.ctrlKey;
+
+      // Cmd+Z / Cmd+Shift+Z — Undo / Redo
+      if (mod && e.key === 'z') {
         e.preventDefault();
         dispatch({ type: e.shiftKey ? 'REDO' : 'UNDO' });
+        return;
       }
+
+      // Cmd+S — Save (open modal)
+      if (mod && e.key === 's') {
+        e.preventDefault();
+        setSaveModalOpen(true);
+        return;
+      }
+
+      // Cmd+D — Duplicate selected layer
+      if (mod && e.key === 'd') {
+        e.preventDefault();
+        if (selectedLayer) {
+          handleDuplicate(selectedLayer);
+          toast.success('Layer duplicated');
+        }
+        return;
+      }
+
+      // Delete / Backspace — Remove selected (unlocked) layer
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (state.selectedLayerId) {
           const layer = state.layers.find(l => l.id === state.selectedLayerId);
@@ -256,20 +405,41 @@ export function SpecialEditor() {
             dispatch({ type: 'REMOVE_LAYER', id: state.selectedLayerId });
           }
         }
+        return;
       }
+
+      // Arrow keys — Nudge selected layer (1px, or 10px with Shift)
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        if (state.selectedLayerId) {
+          const layer = state.layers.find(l => l.id === state.selectedLayerId);
+          if (layer && !layer.locked) {
+            e.preventDefault();
+            const step = e.shiftKey ? 10 : 1;
+            const changes: Partial<TextLayer> = {};
+            if (e.key === 'ArrowUp') changes.y = layer.y - step;
+            if (e.key === 'ArrowDown') changes.y = layer.y + step;
+            if (e.key === 'ArrowLeft') changes.x = layer.x - step;
+            if (e.key === 'ArrowRight') changes.x = layer.x + step;
+            dispatch({ type: 'UPDATE_LAYER', id: state.selectedLayerId, changes });
+          }
+        }
+        return;
+      }
+
+      // Escape — Deselect
       if (e.key === 'Escape') {
         dispatch({ type: 'SELECT_LAYER', id: null });
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [dispatch, state.selectedLayerId, state.layers]);
+  }, [dispatch, state.selectedLayerId, state.layers, selectedLayer, handleDuplicate]);
 
   return (
     <div className="h-[calc(100vh-3rem)] flex flex-col -m-6 lg:-m-8">
       {/* Desktop Toolbar — hidden on mobile (MobileToolbar handles it) */}
       <div className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-surface border-b border-border shrink-0 overflow-x-auto">
-        <button onClick={() => navigate('/specials')} className="btn-ghost text-xs py-1.5 px-2">
+        <button onClick={handleBack} className="btn-ghost text-xs py-1.5 px-2" aria-label="Back to specials">
           <ArrowLeft size={16} />
         </button>
         <div className="w-px h-6 bg-border" />
@@ -279,24 +449,49 @@ export function SpecialEditor() {
           <Plus size={14} /> Text
         </button>
 
-        {/* Text Presets dropdown */}
-        <div className="relative group">
-          <button className="btn-secondary text-xs py-1.5 px-3">
-            <Type size={14} /> Presets
-          </button>
-          <div className="absolute top-full left-0 mt-1 bg-surface border border-border rounded-lg shadow-modal p-1.5 hidden group-hover:block z-30 min-w-[140px]">
-            {TEXT_PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                onClick={() => addTextLayer(preset.overrides as Partial<TextLayer>)}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs text-text-secondary hover:bg-surface-hover rounded-md transition-colors"
-              >
-                <preset.icon size={13} />
-                {preset.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Text Presets dropdown — uses portal to escape toolbar overflow clipping */}
+        <button
+          ref={presetsButtonRef}
+          className="btn-secondary text-xs py-1.5 px-3"
+          onClick={() => setPresetsOpen(!presetsOpen)}
+        >
+          <Type size={14} /> Presets
+        </button>
+        {presetsOpen && createPortal(
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setPresetsOpen(false)} />
+            <div
+              className="fixed z-50 bg-surface border border-border rounded-lg shadow-modal p-1.5 min-w-[140px]"
+              style={(() => {
+                const rect = presetsButtonRef.current?.getBoundingClientRect();
+                return rect ? { top: rect.bottom + 4, left: rect.left } : {};
+              })()}
+            >
+              {TEXT_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  onClick={() => {
+                    addTextLayer(preset.overrides as Partial<TextLayer>);
+                    setPresetsOpen(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs text-text-secondary hover:bg-surface-hover rounded-md transition-colors"
+                >
+                  <preset.icon size={13} />
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body,
+        )}
+
+        <button
+          onClick={() => setTemplatePickerOpen(!templatePickerOpen)}
+          className="btn-secondary text-xs py-1.5 px-3"
+          title="Start from a template"
+        >
+          <LayoutTemplate size={14} /> Templates
+        </button>
 
         <div className="w-px h-6 bg-border" />
 
@@ -314,25 +509,103 @@ export function SpecialEditor() {
         {/* Canvas size */}
         <button
           onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1080 })}
-          className={`p-1.5 rounded-lg transition-colors ${state.canvasHeight === 1080 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
-          title="Square (1080x1080)"
+          className={`p-1.5 rounded-lg transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          title="Square (1080×1080)"
+          aria-label="Square canvas"
         >
           <Square size={16} />
         </button>
         <button
-          onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1920 })}
-          className={`p-1.5 rounded-lg transition-colors ${state.canvasHeight === 1920 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
-          title="Story (1080x1920)"
+          onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1350 })}
+          className={`p-1.5 rounded-lg transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1350 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          title="Portrait (1080×1350)"
+          aria-label="Portrait canvas"
         >
           <RectangleVertical size={16} />
         </button>
+        <button
+          onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1920 })}
+          className={`p-1.5 rounded-lg transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1920 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          title="Story (1080×1920)"
+          aria-label="Story canvas"
+        >
+          <RectangleVertical size={16} className="scale-y-125" />
+        </button>
+        <button
+          onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1920, height: 1080 })}
+          className={`p-1.5 rounded-lg transition-colors ${state.canvasWidth === 1920 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          title="Landscape (1920×1080)"
+          aria-label="Landscape canvas"
+        >
+          <RectangleHorizontal size={16} />
+        </button>
+        <button
+          ref={customSizeRef}
+          onClick={() => { setCustomWidth(state.canvasWidth); setCustomHeight(state.canvasHeight); setCustomSizeOpen(!customSizeOpen); }}
+          className={`p-1.5 rounded-lg transition-colors ${![[1080,1080],[1080,1350],[1080,1920],[1920,1080]].some(([w,h]) => state.canvasWidth === w && state.canvasHeight === h) ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          title={`Custom (${state.canvasWidth}×${state.canvasHeight})`}
+          aria-label="Custom canvas size"
+        >
+          <Ruler size={16} />
+        </button>
+        {customSizeOpen && createPortal(
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setCustomSizeOpen(false)} />
+            <div
+              className="fixed z-50 bg-surface border border-border rounded-lg shadow-modal p-3 w-56"
+              style={(() => {
+                const rect = customSizeRef.current?.getBoundingClientRect();
+                return rect ? { top: rect.bottom + 4, left: rect.left } : {};
+              })()}
+            >
+              <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Custom Size</h4>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                  <label className="text-[11px] text-text-muted">Width</label>
+                  <input
+                    type="number"
+                    min={256}
+                    max={4096}
+                    value={customWidth}
+                    onChange={(e) => setCustomWidth(Number(e.target.value))}
+                    className="input-field text-xs w-full"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-text-muted">Height</label>
+                  <input
+                    type="number"
+                    min={256}
+                    max={4096}
+                    value={customHeight}
+                    onChange={(e) => setCustomHeight(Number(e.target.value))}
+                    className="input-field text-xs w-full"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const w = Math.min(4096, Math.max(256, customWidth));
+                  const h = Math.min(4096, Math.max(256, customHeight));
+                  dispatch({ type: 'SET_CANVAS_SIZE', width: w, height: h });
+                  setCustomSizeOpen(false);
+                  toast.success(`Canvas set to ${w}×${h}`);
+                }}
+                className="btn-primary w-full text-xs"
+              >
+                Apply
+              </button>
+            </div>
+          </>,
+          document.body,
+        )}
 
         <div className="w-px h-6 bg-border" />
 
-        <button onClick={() => dispatch({ type: 'UNDO' })} disabled={!canUndo} className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted disabled:opacity-30" title="Undo (Cmd+Z)">
+        <button onClick={() => dispatch({ type: 'UNDO' })} disabled={!canUndo} className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted disabled:opacity-30" title="Undo (Cmd+Z)" aria-label="Undo">
           <Undo2 size={16} />
         </button>
-        <button onClick={() => dispatch({ type: 'REDO' })} disabled={!canRedo} className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted disabled:opacity-30" title="Redo (Cmd+Shift+Z)">
+        <button onClick={() => dispatch({ type: 'REDO' })} disabled={!canRedo} className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted disabled:opacity-30" title="Redo (Cmd+Shift+Z)" aria-label="Redo">
           <Redo2 size={16} />
         </button>
 
@@ -343,16 +616,18 @@ export function SpecialEditor() {
           onClick={() => setZoom(z => Math.max(0.25, (z ?? canvasRef.current?.getScale() ?? 0.5) - 0.1))}
           className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted"
           title="Zoom Out"
+          aria-label="Zoom out"
         >
           <ZoomOut size={16} />
         </button>
-        <span className="text-xs text-text-muted w-10 text-center tabular-nums">
-          {Math.round((zoom ?? canvasRef.current?.getScale() ?? 1) * 100)}%
+        <span className="text-xs text-text-muted w-10 text-center tabular-nums" aria-label={`Zoom ${Math.round(currentScale * 100)}%`}>
+          {Math.round(currentScale * 100)}%
         </span>
         <button
           onClick={() => setZoom(z => Math.min(2, (z ?? canvasRef.current?.getScale() ?? 0.5) + 0.1))}
           className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted"
           title="Zoom In"
+          aria-label="Zoom in"
         >
           <ZoomIn size={16} />
         </button>
@@ -360,6 +635,7 @@ export function SpecialEditor() {
           onClick={() => setZoom(undefined)}
           className={`p-1.5 rounded-lg hover:bg-surface-hover transition-colors ${zoom === undefined ? 'text-primary' : 'text-text-muted'}`}
           title="Fit to Screen"
+          aria-label="Fit to screen"
         >
           <Maximize size={16} />
         </button>
@@ -379,7 +655,7 @@ export function SpecialEditor() {
 
         <div className="w-px h-6 bg-border" />
 
-        <button onClick={handleExport} className="btn-secondary text-xs py-1.5 px-3">
+        <button onClick={() => setExportModalOpen(true)} className="btn-secondary text-xs py-1.5 px-3" aria-label="Export image">
           <Download size={14} /> Export
         </button>
         <button onClick={() => setSaveModalOpen(true)} className="btn-primary text-xs py-1.5 px-3">
@@ -389,7 +665,7 @@ export function SpecialEditor() {
 
       {/* Mobile header — clean: back + title + canvas size + BG color */}
       <div className="flex md:hidden items-center gap-3 px-4 py-2.5 bg-surface border-b border-border shrink-0">
-        <button onClick={() => navigate('/specials')} className="p-1.5 rounded-lg hover:bg-surface-hover">
+        <button onClick={handleBack} className="p-1.5 rounded-lg hover:bg-surface-hover" aria-label="Back to specials">
           <ArrowLeft size={18} className="text-text-primary" />
         </button>
         <h2 className="text-sm font-semibold text-text-primary flex-1 truncate">
@@ -399,15 +675,35 @@ export function SpecialEditor() {
           <div className="flex gap-1">
             <button
               onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1080 })}
-              className={`p-1.5 rounded transition-colors ${state.canvasHeight === 1080 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
+              className={`p-1.5 rounded transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
+              aria-label="Square canvas"
+              title="Square (1080×1080)"
             >
               <Square size={14} />
             </button>
             <button
-              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1920 })}
-              className={`p-1.5 rounded transition-colors ${state.canvasHeight === 1920 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
+              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1350 })}
+              className={`p-1.5 rounded transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1350 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
+              aria-label="Portrait canvas"
+              title="Portrait (1080×1350)"
             >
               <RectangleVertical size={14} />
+            </button>
+            <button
+              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1920 })}
+              className={`p-1.5 rounded transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1920 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
+              aria-label="Story canvas"
+              title="Story (1080×1920)"
+            >
+              <RectangleVertical size={14} className="scale-y-125" />
+            </button>
+            <button
+              onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1920, height: 1080 })}
+              className={`p-1.5 rounded transition-colors ${state.canvasWidth === 1920 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'text-text-muted bg-surface-hover'}`}
+              aria-label="Landscape canvas"
+              title="Landscape (1920×1080)"
+            >
+              <RectangleHorizontal size={14} />
             </button>
           </div>
           <input
@@ -421,8 +717,8 @@ export function SpecialEditor() {
 
       {/* Editor Body */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left Panel - Layers (desktop only) */}
-        <div className="w-56 bg-surface border-r border-border p-3 overflow-y-auto hidden md:block">
+        {/* Left Panel - Layers (desktop only, narrower at md, wider at lg) */}
+        <div className="w-44 lg:w-56 bg-surface border-r border-border p-2 lg:p-3 overflow-y-auto hidden md:block">
           <LayerPanel
             layers={state.layers}
             selectedId={state.selectedLayerId}
@@ -435,17 +731,17 @@ export function SpecialEditor() {
           />
         </div>
 
-        {/* Canvas Area — touch-action:manipulation blocks browser pinch-zoom */}
-        <div
-          className="flex-1 bg-surface-active p-4 pb-24 md:pb-4 overflow-auto flex items-start justify-center"
-          style={{ touchAction: 'manipulation' }}
-        >
-          <Canvas
+        {/* Canvas Area — DOM-based canvas with gesture handling */}
+        <div className="flex-1 bg-surface-active pb-24 md:pb-0 overflow-hidden">
+          <DomCanvas
             ref={canvasRef}
             state={state}
             onSelectLayer={(id) => dispatch({ type: 'SELECT_LAYER', id })}
             onUpdateLayer={(id, changes) => dispatch({ type: 'UPDATE_LAYER', id, changes })}
+            onDuplicateLayer={handleDuplicate}
+            onDeleteLayer={(id) => dispatch({ type: 'REMOVE_LAYER', id })}
             zoomOverride={zoom}
+            onScaleChange={setCurrentScale}
             onLayerTapped={() => {
               // Don't auto-open properties on tap — let users drag freely.
               // Properties are auto-opened only when ADDING a new layer from presets.
@@ -453,8 +749,8 @@ export function SpecialEditor() {
           />
         </div>
 
-        {/* Right Panel - Properties / Adjustments (desktop only) */}
-        <div className="w-72 bg-surface border-l border-border flex-col hidden lg:flex">
+        {/* Right Panel - Properties / Adjustments (desktop only, narrower at md, wider at lg) */}
+        <div className="w-60 lg:w-72 bg-surface border-l border-border flex-col hidden md:flex">
           {/* Tab switcher */}
           <div className="flex border-b border-border shrink-0">
             <button
@@ -518,10 +814,11 @@ export function SpecialEditor() {
         onOpenLayers={() => setMobileSheet('layers')}
         onOpenProperties={() => setMobileSheet('properties')}
         onOpenAdjustments={() => setMobileSheet('adjustments')}
+        onOpenTemplates={() => setMobileSheet('templates')}
         onUndo={() => dispatch({ type: 'UNDO' })}
         onRedo={() => dispatch({ type: 'REDO' })}
         onSave={() => setSaveModalOpen(true)}
-        onExport={handleExport}
+        onExport={() => setExportModalOpen(true)}
         canUndo={canUndo}
         canRedo={canRedo}
         uploading={uploading}
@@ -550,7 +847,7 @@ export function SpecialEditor() {
       <BottomSheet
         open={mobileSheet === 'properties'}
         onClose={() => setMobileSheet(null)}
-        title="Text Properties"
+        title={selectedLayer?.elementType === 'divider' ? 'Divider Properties' : 'Text Properties'}
       >
         {selectedLayer ? (
           <PropertyPanel
@@ -585,6 +882,189 @@ export function SpecialEditor() {
         onClose={() => setLibraryOpen(false)}
         onSelect={handleLibrarySelect}
       />
+
+      {/* Leave confirmation */}
+      <ConfirmDialog
+        open={leaveConfirmOpen}
+        onClose={() => setLeaveConfirmOpen(false)}
+        onConfirm={() => navigate('/specials')}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Your draft is auto-saved and you can resume later. Leave anyway?"
+        confirmLabel="Leave"
+        danger={false}
+      />
+
+      {/* Export Modal */}
+      <Modal open={exportModalOpen} onClose={() => setExportModalOpen(false)} title="Export Image" maxWidth="max-w-sm">
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-text-secondary mb-1.5 block">Format</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setExportFormat('png')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${exportFormat === 'png' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}
+              >
+                PNG
+              </button>
+              <button
+                onClick={() => setExportFormat('jpeg')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${exportFormat === 'jpeg' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}
+              >
+                JPEG
+              </button>
+            </div>
+            <p className="text-[11px] text-text-muted mt-1">
+              {exportFormat === 'png' ? 'Lossless quality, larger file size. Best for graphics with text.' : 'Smaller file size, adjustable quality. Best for photos.'}
+            </p>
+          </div>
+          {exportFormat === 'jpeg' && (
+            <div>
+              <label className="text-xs font-medium text-text-secondary mb-1.5 block">Quality: {exportQuality}%</label>
+              <input
+                type="range"
+                min={10}
+                max={100}
+                step={5}
+                value={exportQuality}
+                onChange={(e) => setExportQuality(Number(e.target.value))}
+                className="w-full accent-primary"
+              />
+              <div className="flex justify-between text-[10px] text-text-muted mt-0.5">
+                <span>Smaller file</span>
+                <span>Best quality</span>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => { handleExport(exportFormat, exportQuality); setExportModalOpen(false); }}
+            className="btn-primary w-full"
+          >
+            <Download size={14} /> Download {exportFormat.toUpperCase()}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Template Picker — shared grid used in both Modal (desktop) and BottomSheet (mobile) */}
+      {(() => {
+        const templateGrid = (
+          <>
+            <p className="text-xs text-text-muted mb-3">This will replace your current canvas. Your draft is auto-saved.</p>
+
+            {/* User templates */}
+            {userTemplates.length > 0 && (
+              <>
+                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">My Templates</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  {userTemplates.map((t) => (
+                    <div key={t.id} className="relative group">
+                      <button
+                        onClick={() => loadUserTemplate(t)}
+                        className="text-left w-full p-3 rounded-xl border border-border hover:border-primary/50 hover:bg-surface-hover transition-all"
+                      >
+                        <div
+                          className="w-full aspect-square rounded-lg mb-2 flex items-center justify-center text-white text-xs font-bold overflow-hidden"
+                          style={{ background: t.background_gradient || t.background_color }}
+                        >
+                          {t.thumbnail_url ? (
+                            <img src={t.thumbnail_url} alt={t.name} className="w-full h-full object-cover rounded-lg" />
+                          ) : t.name}
+                        </div>
+                        <p className="text-sm font-medium text-text-primary">{t.name}</p>
+                        <p className="text-xs text-text-muted capitalize">{t.category}</p>
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteTemplateId(t.id); }}
+                        className="absolute top-2 right-2 p-1 rounded-md bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        aria-label="Delete template"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Built-in templates */}
+            <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Built-in</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => { loadTemplate(t.id); setMobileSheet(null); }}
+                  className="text-left p-3 rounded-xl border border-border hover:border-primary/50 hover:bg-surface-hover transition-all group"
+                >
+                  <div
+                    className="w-full aspect-square rounded-lg mb-2 flex items-center justify-center text-white text-xs font-bold"
+                    style={{ background: t.backgroundGradient || t.backgroundColor }}
+                  >
+                    {t.name}
+                  </div>
+                  <p className="text-sm font-medium text-text-primary group-hover:text-primary transition-colors">{t.name}</p>
+                  <p className="text-xs text-text-muted capitalize">{t.category}</p>
+                </button>
+              ))}
+            </div>
+          </>
+        );
+        return (
+          <>
+            <Modal open={templatePickerOpen} onClose={() => setTemplatePickerOpen(false)} title="Start from Template" maxWidth="max-w-md">
+              {templateGrid}
+            </Modal>
+            <BottomSheet open={mobileSheet === 'templates'} onClose={() => setMobileSheet(null)} title="Templates">
+              {templateGrid}
+            </BottomSheet>
+          </>
+        );
+      })()}
+
+      {/* Delete User Template Confirmation */}
+      <ConfirmDialog
+        open={deleteTemplateId !== null}
+        onClose={() => setDeleteTemplateId(null)}
+        onConfirm={() => { if (deleteTemplateId) removeTemplate(deleteTemplateId); setDeleteTemplateId(null); }}
+        title="Delete Template"
+        message="Are you sure you want to delete this template? This cannot be undone."
+        confirmLabel="Delete"
+      />
+
+      {/* Save as Template Modal */}
+      <Modal open={saveTemplateModalOpen} onClose={() => setSaveTemplateModalOpen(false)} title="Save as Template" maxWidth="max-w-sm">
+        <div className="space-y-4">
+          <div>
+            <label className="label">Template Name *</label>
+            <input
+              className="input-field"
+              value={templateForm.name}
+              onChange={(e) => setTemplateForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="My Happy Hour Template"
+            />
+          </div>
+          <div>
+            <label className="label">Category</label>
+            <select
+              className="input-field"
+              value={templateForm.category}
+              onChange={(e) => setTemplateForm((f) => ({ ...f, category: e.target.value }))}
+            >
+              <option value="drink">Drink</option>
+              <option value="food">Food</option>
+              <option value="event">Event</option>
+              <option value="seasonal">Seasonal</option>
+            </select>
+          </div>
+          <p className="text-[11px] text-text-muted">Saves your current canvas layout as a reusable starting point.</p>
+          <button
+            onClick={handleSaveAsTemplate}
+            disabled={savingTemplate || !templateForm.name.trim()}
+            className="btn-primary w-full"
+          >
+            {savingTemplate ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {savingTemplate ? 'Saving...' : 'Save Template'}
+          </button>
+        </div>
+      </Modal>
 
       {/* Save Modal */}
       <Modal open={saveModalOpen} onClose={() => setSaveModalOpen(false)} title="Save Special">
@@ -635,11 +1115,19 @@ export function SpecialEditor() {
             <button onClick={() => setSaveModalOpen(false)} className="btn-secondary">Cancel</button>
             <button
               onClick={handleSave}
-              disabled={saving || !saveForm.title}
+              disabled={saving || !saveForm.title.trim() || !saveForm.description.trim()}
               className="btn-primary"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               {isEdit ? 'Update' : 'Save'}
+            </button>
+          </div>
+          <div className="border-t border-border mt-4 pt-3 text-center">
+            <button
+              onClick={() => { setSaveModalOpen(false); setSaveTemplateModalOpen(true); }}
+              className="text-xs text-text-muted hover:text-primary transition-colors"
+            >
+              Or save as reusable template →
             </button>
           </div>
         </div>
