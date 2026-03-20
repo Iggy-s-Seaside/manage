@@ -21,8 +21,6 @@ interface DomCanvasProps {
   state: EditorState;
   onSelectLayer: (id: string | null) => void;
   onUpdateLayer: (id: string, changes: Partial<TextLayer>) => void;
-  onDuplicateLayer?: (layer: TextLayer) => void;
-  onDeleteLayer?: (layerId: string) => void;
   zoomOverride?: number;
   onLayerTapped?: (layer: TextLayer) => void;
   onScaleChange?: (scale: number) => void;
@@ -38,8 +36,6 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
   state,
   onSelectLayer,
   onUpdateLayer,
-  onDuplicateLayer,
-  onDeleteLayer,
   zoomOverride,
   onLayerTapped,
   onScaleChange,
@@ -227,8 +223,6 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
             snapLines={interaction.snapLines}
             zoom={zoom}
             onHandlePointerDown={interaction.handleHandlePointerDown}
-            onDuplicate={onDuplicateLayer}
-            onDelete={onDeleteLayer}
           />
         )}
       </div>

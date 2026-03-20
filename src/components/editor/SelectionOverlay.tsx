@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { Lock, Copy, Trash2 } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
 interface SnapLines {
@@ -15,8 +15,6 @@ interface SelectionOverlayProps {
   snapLines: SnapLines;
   zoom?: number;
   onHandlePointerDown: (e: React.PointerEvent, handle: string) => void;
-  onDuplicate?: (layer: TextLayer) => void;
-  onDelete?: (layerId: string) => void;
 }
 
 /** Estimate text height based on line count and fontSize */
@@ -27,7 +25,7 @@ function estimateHeight(layer: TextLayer): number {
   return lines.length > 1 ? (lines.length - 1) * lineHeight + layer.fontSize : layer.fontSize;
 }
 
-const HANDLE_SIZE = 12;
+const HANDLE_SIZE = 10;
 const TOUCH_SIZE = 44;
 const ROTATION_OFFSET = 30;
 
@@ -42,8 +40,6 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
   snapLines,
   zoom = 1,
   onHandlePointerDown,
-  onDuplicate,
-  onDelete,
 }) => {
   const height = estimateHeight(layer);
   const padding = 4;
@@ -68,6 +64,9 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
   const rotateX = boxW / 2;
   const rotateY = -ROTATION_OFFSET;
 
+  // Scale handle visual size inversely to keep consistent on screen
+  const handleVisualSize = Math.max(HANDLE_SIZE, HANDLE_SIZE / zoom);
+
   return (
     <>
       {/* Selection ring + handles (rotated with the layer) */}
@@ -82,12 +81,12 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
           transformOrigin: `${layer.width / 2 + padding}px ${height / 2 + padding}px`,
         }}
       >
-        {/* Dashed selection border with glow */}
+        {/* Selection border — solid for cleaner look */}
         <div
-          className="absolute inset-0 rounded-sm"
+          className="absolute inset-0 rounded"
           style={{
-            border: '2px dashed #2dd4bf',
-            boxShadow: '0 0 8px rgba(45, 212, 191, 0.3)',
+            border: `${Math.max(1.5, 1.5 / zoom)}px solid rgba(45, 212, 191, 0.8)`,
+            boxShadow: '0 0 0 1px rgba(0,0,0,0.1), 0 0 12px rgba(45, 212, 191, 0.2)',
           }}
         />
 
@@ -98,9 +97,9 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
             style={{
               left: boxW / 2 - 0.5,
               top: -ROTATION_OFFSET,
-              width: 1,
+              width: Math.max(1, 1 / zoom),
               height: ROTATION_OFFSET,
-              backgroundColor: '#2dd4bf',
+              backgroundColor: 'rgba(45, 212, 191, 0.6)',
               pointerEvents: 'none',
             }}
           />
@@ -124,12 +123,13 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
           >
             <div
               style={{
-                width: HANDLE_SIZE,
-                height: HANDLE_SIZE,
+                width: handleVisualSize,
+                height: handleVisualSize,
                 borderRadius: '50%',
                 backgroundColor: '#fff',
-                border: '2px solid #2dd4bf',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                border: `${Math.max(1.5, 1.5 / zoom)}px solid #2dd4bf`,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                transition: 'transform 150ms ease',
               }}
             />
           </div>
@@ -153,14 +153,14 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
             onPointerDown={(e) => onHandlePointerDown(e, id)}
           >
             <div
-              className="transition-colors duration-100"
               style={{
-                width: HANDLE_SIZE,
-                height: HANDLE_SIZE,
+                width: handleVisualSize,
+                height: handleVisualSize,
                 borderRadius: '50%',
                 backgroundColor: '#fff',
-                border: '2px solid #2dd4bf',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                border: `${Math.max(1.5, 1.5 / zoom)}px solid #2dd4bf`,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                transition: 'transform 150ms ease',
               }}
             />
           </div>
@@ -169,44 +169,15 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
         {/* Lock indicator */}
         {layer.locked && (
           <div
-            className="absolute flex items-center justify-center rounded bg-amber-500/90 p-0.5"
-            style={{ top: -20, right: -20 }}
-          >
-            <Lock size={12} className="text-white" />
-          </div>
-        )}
-
-        {/* Quick-action buttons (duplicate + delete) — below selection */}
-        {!layer.locked && (onDuplicate || onDelete) && (
-          <div
-            className="absolute pointer-events-auto flex gap-1"
+            className="absolute flex items-center justify-center rounded-md bg-amber-500/90 p-1"
             style={{
-              left: '50%',
-              top: boxH + 6 / zoom,
-              transform: `translateX(-50%) scale(${1 / zoom})`,
-              transformOrigin: 'top center',
+              top: -16 / zoom,
+              right: -16 / zoom,
+              transform: `scale(${1 / zoom})`,
+              transformOrigin: 'bottom left',
             }}
           >
-            {onDuplicate && (
-              <button
-                className="flex items-center justify-center rounded-md bg-surface/90 border border-border/50 backdrop-blur-sm shadow-sm"
-                style={{ width: 32, height: 32 }}
-                onPointerDown={(e) => { e.stopPropagation(); onDuplicate(layer); }}
-                aria-label="Duplicate"
-              >
-                <Copy size={14} className="text-primary" />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                className="flex items-center justify-center rounded-md bg-surface/90 border border-border/50 backdrop-blur-sm shadow-sm"
-                style={{ width: 32, height: 32 }}
-                onPointerDown={(e) => { e.stopPropagation(); onDelete(layer.id); }}
-                aria-label="Delete"
-              >
-                <Trash2 size={14} className="text-red-400" />
-              </button>
-            )}
+            <Lock size={12} className="text-white" />
           </div>
         )}
       </div>
@@ -219,10 +190,9 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
           style={{
             left: x,
             top: 0,
-            width: 1,
+            width: Math.max(1, 1 / zoom),
             height: canvasHeight,
-            borderLeft: '1px dashed rgba(45, 212, 191, 0.6)',
-            opacity: 0.7,
+            backgroundColor: 'rgba(45, 212, 191, 0.5)',
           }}
         />
       ))}
@@ -234,9 +204,8 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
             left: 0,
             top: y,
             width: canvasWidth,
-            height: 1,
-            borderTop: '1px dashed rgba(45, 212, 191, 0.6)',
-            opacity: 0.7,
+            height: Math.max(1, 1 / zoom),
+            backgroundColor: 'rgba(45, 212, 191, 0.5)',
           }}
         />
       ))}

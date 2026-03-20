@@ -36,7 +36,7 @@ function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }: {
   const display = step < 1 ? value.toFixed(step < 0.1 ? 2 : 1) : String(Math.round(value));
   return (
     <div className="mb-3">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1.5">
         <label className="text-xs text-text-muted">{label}</label>
         <span className="text-xs font-medium text-text-secondary tabular-nums">{display}{unit}</span>
       </div>
@@ -47,7 +47,7 @@ function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }: {
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-primary h-2"
+        className="w-full accent-primary h-2 rounded-full"
       />
     </div>
   );
@@ -69,11 +69,11 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
   const isUnderline = layer.textDecoration === 'underline';
 
   return (
-    <div className="space-y-5 text-sm">
+    <div className="space-y-4 text-sm">
       {/* ─── Text Content ─── */}
       <Section title={layer.elementType === 'divider' ? 'Label' : 'Text'}>
         <textarea
-          className="input-field min-h-[60px] resize-y text-[13px]"
+          className="input-field min-h-[56px] resize-y text-[13px] rounded-xl"
           value={layer.elementType === 'divider' ? (layer.dividerLabel ?? layer.text) : layer.text}
           onChange={(e) => {
             if (layer.elementType === 'divider') {
@@ -94,7 +94,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
               type="color"
               value={layer.dividerLineColor || layer.fill}
               onChange={(e) => onUpdate({ dividerLineColor: e.target.value })}
-              className="w-8 h-8 rounded cursor-pointer border border-border ml-auto"
+              className="w-8 h-8 rounded-lg cursor-pointer border border-border ml-auto"
             />
           </div>
           <SliderRow label="Thickness" value={layer.dividerLineThickness ?? 1} min={1} max={10} onChange={(v) => onUpdate({ dividerLineThickness: v })} />
@@ -116,11 +116,11 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
         <SliderRow label="Size" value={layer.fontSize} min={8} max={200} unit="px" onChange={(v) => onUpdate({ fontSize: v })} />
 
         {/* Style buttons */}
-        <div className="flex gap-1 mb-3">
+        <div className="flex gap-1.5 mb-3">
           <StyleButton active={isBold} onClick={() => toggleFontStyle('bold')} label="Bold"><Bold size={14} /></StyleButton>
           <StyleButton active={isItalic} onClick={() => toggleFontStyle('italic')} label="Italic"><Italic size={14} /></StyleButton>
           <StyleButton active={isUnderline} onClick={() => onUpdate({ textDecoration: isUnderline ? '' : 'underline' })} label="Underline"><Underline size={14} /></StyleButton>
-          <div className="w-px bg-border mx-1" />
+          <div className="w-px bg-border/40 mx-0.5" />
           <StyleButton active={layer.align === 'left'} onClick={() => onUpdate({ align: 'left' })} label="Left"><AlignLeft size={14} /></StyleButton>
           <StyleButton active={layer.align === 'center'} onClick={() => onUpdate({ align: 'center' })} label="Center"><AlignCenter size={14} /></StyleButton>
           <StyleButton active={layer.align === 'right'} onClick={() => onUpdate({ align: 'right' })} label="Right"><AlignRight size={14} /></StyleButton>
@@ -133,20 +133,20 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
       {/* ─── Colors ─── */}
       <Section title="Colors">
         <div className="mb-3">
-          <label className="text-xs text-text-muted mb-1 block">Fill Color</label>
+          <label className="text-xs text-text-muted mb-1.5 block">Fill Color</label>
           <div className="flex items-center gap-2">
             <input
               type="color"
               value={layer.fill}
               onChange={(e) => onUpdate({ fill: e.target.value })}
-              className="w-8 h-8 rounded cursor-pointer border border-border"
+              className="w-8 h-8 rounded-lg cursor-pointer border border-border"
             />
             <div className="flex gap-1.5 flex-wrap">
               {BRAND_COLORS.map((c) => (
                 <button
                   key={c}
                   onClick={() => onUpdate({ fill: c })}
-                  className={`w-9 h-9 rounded-full border-2 transition-transform hover:scale-110 ${layer.fill === c ? 'border-primary scale-110' : 'border-border'}`}
+                  className={`w-8 h-8 rounded-full border-2 transition-all active:scale-90 ${layer.fill === c ? 'border-primary scale-110 shadow-md' : 'border-border/50'}`}
                   style={{ backgroundColor: c }}
                 />
               ))}
@@ -160,7 +160,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
             type="color"
             value={layer.stroke || '#000000'}
             onChange={(e) => onUpdate({ stroke: e.target.value })}
-            className="w-7 h-7 rounded cursor-pointer border border-border"
+            className="w-7 h-7 rounded-lg cursor-pointer border border-border"
           />
         </div>
         <SliderRow label="Stroke Width" value={layer.strokeWidth} min={0} max={10} step={0.5} unit="px" onChange={(v) => onUpdate({ strokeWidth: v })} />
@@ -175,7 +175,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
             type="color"
             value={toHex(layer.shadowColor)}
             onChange={(e) => onUpdate({ shadowColor: e.target.value })}
-            className="w-7 h-7 rounded cursor-pointer border border-border"
+            className="w-7 h-7 rounded-lg cursor-pointer border border-border"
           />
         </div>
         <SliderRow label="Blur" value={layer.shadowBlur} min={0} max={30} onChange={(v) => onUpdate({ shadowBlur: v })} />
@@ -194,7 +194,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
       {/* ─── Advanced toggle ─── */}
       <button
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg bg-surface-hover text-text-muted text-xs font-medium uppercase tracking-wider hover:bg-surface-active transition-colors"
+        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-surface-hover text-text-muted text-xs font-medium uppercase tracking-wider hover:bg-surface-active transition-all active:scale-[0.98]"
       >
         <Settings2 size={14} />
         Advanced
@@ -207,7 +207,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
             <div>
               <label className="text-xs text-text-muted">Weight</label>
               <select
-                className="input-field text-[13px] w-full"
+                className="input-field text-[13px] w-full rounded-lg"
                 value={layer.fontWeight || 400}
                 onChange={(e) => onUpdate({ fontWeight: Number(e.target.value) })}
               >
@@ -221,7 +221,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
             <div>
               <label className="text-xs text-text-muted">Transform</label>
               <select
-                className="input-field text-[13px] w-full"
+                className="input-field text-[13px] w-full rounded-lg"
                 value={layer.textTransform || 'none'}
                 onChange={(e) => onUpdate({ textTransform: e.target.value as TextLayer['textTransform'] })}
               >
@@ -235,51 +235,51 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-text-muted">Font Size (exact)</label>
-              <input type="number" min={1} max={400} className="input-field text-[13px]" value={layer.fontSize} onChange={(e) => { const v = Number(e.target.value); if (v >= 1 && v <= 400) onUpdate({ fontSize: v }); }} />
+              <input type="number" min={1} max={400} className="input-field text-[13px] rounded-lg" value={layer.fontSize} onChange={(e) => { const v = Number(e.target.value); if (v >= 1 && v <= 400) onUpdate({ fontSize: v }); }} />
             </div>
             <div>
               <label className="text-xs text-text-muted">Letter Spacing</label>
-              <input type="number" step={0.5} className="input-field text-[13px]" value={layer.letterSpacing} onChange={(e) => onUpdate({ letterSpacing: Number(e.target.value) })} />
+              <input type="number" step={0.5} className="input-field text-[13px] rounded-lg" value={layer.letterSpacing} onChange={(e) => onUpdate({ letterSpacing: Number(e.target.value) })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-text-muted">X (exact)</label>
-              <input type="number" className="input-field text-[13px]" value={Math.round(layer.x)} onChange={(e) => onUpdate({ x: Number(e.target.value) })} />
+              <input type="number" className="input-field text-[13px] rounded-lg" value={Math.round(layer.x)} onChange={(e) => onUpdate({ x: Number(e.target.value) })} />
             </div>
             <div>
               <label className="text-xs text-text-muted">Y (exact)</label>
-              <input type="number" className="input-field text-[13px]" value={Math.round(layer.y)} onChange={(e) => onUpdate({ y: Number(e.target.value) })} />
+              <input type="number" className="input-field text-[13px] rounded-lg" value={Math.round(layer.y)} onChange={(e) => onUpdate({ y: Number(e.target.value) })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-text-muted">Width (exact)</label>
-              <input type="number" className="input-field text-[13px]" value={Math.round(layer.width)} onChange={(e) => onUpdate({ width: Number(e.target.value) })} />
+              <input type="number" className="input-field text-[13px] rounded-lg" value={Math.round(layer.width)} onChange={(e) => onUpdate({ width: Number(e.target.value) })} />
             </div>
             <div>
               <label className="text-xs text-text-muted">Rotation (exact)</label>
-              <input type="number" className="input-field text-[13px]" value={Math.round(layer.rotation)} onChange={(e) => onUpdate({ rotation: Number(e.target.value) })} />
+              <input type="number" className="input-field text-[13px] rounded-lg" value={Math.round(layer.rotation)} onChange={(e) => onUpdate({ rotation: Number(e.target.value) })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-text-muted">Stroke Width</label>
-              <input type="number" min={0} max={20} step={0.5} className="input-field text-[13px]" value={layer.strokeWidth} onChange={(e) => onUpdate({ strokeWidth: Number(e.target.value) })} />
+              <input type="number" min={0} max={20} step={0.5} className="input-field text-[13px] rounded-lg" value={layer.strokeWidth} onChange={(e) => onUpdate({ strokeWidth: Number(e.target.value) })} />
             </div>
             <div>
               <label className="text-xs text-text-muted">Shadow Blur</label>
-              <input type="number" min={0} max={50} className="input-field text-[13px]" value={layer.shadowBlur} onChange={(e) => onUpdate({ shadowBlur: Number(e.target.value) })} />
+              <input type="number" min={0} max={50} className="input-field text-[13px] rounded-lg" value={layer.shadowBlur} onChange={(e) => onUpdate({ shadowBlur: Number(e.target.value) })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-text-muted">Shadow X</label>
-              <input type="number" className="input-field text-[13px]" value={layer.shadowOffsetX} onChange={(e) => onUpdate({ shadowOffsetX: Number(e.target.value) })} />
+              <input type="number" className="input-field text-[13px] rounded-lg" value={layer.shadowOffsetX} onChange={(e) => onUpdate({ shadowOffsetX: Number(e.target.value) })} />
             </div>
             <div>
               <label className="text-xs text-text-muted">Shadow Y</label>
-              <input type="number" className="input-field text-[13px]" value={layer.shadowOffsetY} onChange={(e) => onUpdate({ shadowOffsetY: Number(e.target.value) })} />
+              <input type="number" className="input-field text-[13px] rounded-lg" value={layer.shadowOffsetY} onChange={(e) => onUpdate({ shadowOffsetY: Number(e.target.value) })} />
             </div>
           </div>
         </div>
@@ -288,11 +288,11 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
       {/* ─── Delete ─── */}
       {confirmDelete ? (
         <div className="flex gap-2">
-          <button onClick={() => { onDelete(); setConfirmDelete(false); }} className="btn-danger flex-1 text-[13px]">Confirm Delete</button>
-          <button onClick={() => setConfirmDelete(false)} className="btn-secondary flex-1 text-[13px]">Cancel</button>
+          <button onClick={() => { onDelete(); setConfirmDelete(false); }} className="btn-danger flex-1 text-[13px] rounded-xl">Confirm Delete</button>
+          <button onClick={() => setConfirmDelete(false)} className="btn-secondary flex-1 text-[13px] rounded-xl">Cancel</button>
         </div>
       ) : (
-        <button onClick={() => setConfirmDelete(true)} className="btn-danger w-full text-[13px]" aria-label="Delete layer">
+        <button onClick={() => setConfirmDelete(true)} className="btn-danger w-full text-[13px] rounded-xl" aria-label="Delete layer">
           <Trash2 size={14} /> Delete Layer
         </button>
       )}
@@ -316,8 +316,8 @@ function StyleButton({ active, onClick, label, children }: { active: boolean; on
     <button
       onClick={onClick}
       aria-label={label}
-      className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
-        active ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'
+      className={`p-2.5 rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-90 ${
+        active ? 'bg-primary text-white shadow-sm' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'
       }`}
     >
       {children}

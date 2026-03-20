@@ -675,14 +675,15 @@ export function SpecialEditor() {
 
       {/* Mobile header — ultra-minimal, just back + title */}
       <div
-        className="flex md:hidden items-center gap-3 px-3 py-1.5 shrink-0 bg-surface/80 backdrop-blur-md border-b border-border/50"
+        className="flex md:hidden items-center gap-3 px-3 py-1.5 shrink-0 bg-surface/90 backdrop-blur-xl border-b border-border/30"
         style={{
           opacity: isGesturing ? 0 : 1,
-          transition: 'opacity 200ms ease',
+          transform: isGesturing ? 'translateY(-10px)' : 'translateY(0)',
+          transition: 'opacity 200ms ease, transform 200ms ease',
           pointerEvents: isGesturing ? 'none' : 'auto',
         }}
       >
-        <button onClick={handleBack} className="p-1.5 rounded-lg hover:bg-surface-hover" aria-label="Back to specials">
+        <button onClick={handleBack} className="p-2 rounded-xl hover:bg-surface-hover active:scale-90 transition-all" aria-label="Back to specials">
           <ArrowLeft size={18} className="text-text-primary" />
         </button>
         <h2 className="text-sm font-semibold text-text-primary flex-1 truncate">
@@ -713,8 +714,6 @@ export function SpecialEditor() {
             state={state}
             onSelectLayer={(id) => dispatch({ type: 'SELECT_LAYER', id })}
             onUpdateLayer={(id, changes) => dispatch({ type: 'UPDATE_LAYER', id, changes })}
-            onDuplicateLayer={handleDuplicate}
-            onDeleteLayer={(id) => dispatch({ type: 'REMOVE_LAYER', id })}
             zoomOverride={zoom}
             onScaleChange={setCurrentScale}
             onGestureChange={setIsGesturing}

@@ -1,6 +1,6 @@
 import { useState, memo } from 'react';
 import {
-  Plus, Image, Upload, Layers, Sliders, SlidersHorizontal,
+  Plus, Image, Upload, Layers, SlidersHorizontal,
   Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate,
   Square, RectangleVertical, RectangleHorizontal
 } from 'lucide-react';
@@ -71,18 +71,23 @@ export const MobileToolbar = memo(function MobileToolbar({
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-[60] safe-area-bottom"
       style={{
-        opacity: gestureActive ? 0.3 : 1,
-        transition: 'opacity 150ms ease',
+        opacity: gestureActive ? 0.2 : 1,
+        transform: gestureActive ? 'translateY(10px)' : 'translateY(0)',
+        transition: 'opacity 200ms ease, transform 200ms ease',
+        pointerEvents: gestureActive ? 'none' : 'auto',
       }}
     >
       {/* Add element popover */}
       {addMenuOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAddMenuOpen(false)} />
-          <div className="absolute bottom-full left-3 mb-2 z-50 bg-surface/95 backdrop-blur-md border border-border/50 rounded-xl shadow-modal p-2 animate-fade-in">
+          <div
+            className="absolute bottom-full left-3 mb-2 z-50 bg-surface/95 backdrop-blur-xl border border-border/30 rounded-2xl shadow-modal p-1.5 min-w-[160px]"
+            style={{ animation: 'popUp 200ms cubic-bezier(0.32, 0.72, 0, 1)' }}
+          >
             <button
               onClick={() => { onAddText(); setAddMenuOpen(false); }}
-              className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
+              className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-text-primary hover:bg-surface-hover rounded-xl transition-colors active:scale-[0.98]"
             >
               <Plus size={16} className="text-primary" /> Plain Text
             </button>
@@ -90,7 +95,7 @@ export const MobileToolbar = memo(function MobileToolbar({
               <button
                 key={preset.label}
                 onClick={() => { onAddText(preset.overrides as Partial<TextLayer>); setAddMenuOpen(false); }}
-                className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-text-secondary hover:bg-surface-hover rounded-lg transition-colors"
+                className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-text-secondary hover:bg-surface-hover rounded-xl transition-colors active:scale-[0.98]"
               >
                 <span className="w-4" /> {preset.label}
               </button>
@@ -103,15 +108,18 @@ export const MobileToolbar = memo(function MobileToolbar({
       {moreOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-          <div className="absolute bottom-full right-3 mb-2 z-50 bg-surface/95 backdrop-blur-md border border-border/50 rounded-xl shadow-modal p-2 animate-fade-in min-w-[180px]">
+          <div
+            className="absolute bottom-full right-3 mb-2 z-50 bg-surface/95 backdrop-blur-xl border border-border/30 rounded-2xl shadow-modal p-1.5 min-w-[180px]"
+            style={{ animation: 'popUp 200ms cubic-bezier(0.32, 0.72, 0, 1)' }}
+          >
             <PopoverButton icon={LayoutTemplate} label="Templates" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
             <PopoverButton icon={Image} label="Library" onClick={() => { onOpenLibrary(); setMoreOpen(false); }} />
             <PopoverButton icon={Upload} label="Upload" onClick={() => { onUpload(); setMoreOpen(false); }} />
-            <PopoverButton icon={Sliders} label="Adjustments" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} />
-            <div className="h-px bg-border my-1" />
+            <PopoverButton icon={SlidersHorizontal} label="Adjustments" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} />
+            <div className="h-px bg-border/40 my-1 mx-2" />
             {/* Canvas size shortcuts */}
             {onSetCanvasSize && (
-              <div className="flex items-center gap-1 px-3 py-1.5">
+              <div className="flex items-center gap-1 px-3 py-2">
                 <span className="text-xs text-text-muted mr-auto">Size</span>
                 {([
                   { w: 1080, h: 1080, icon: Square, label: '1:1' },
@@ -122,7 +130,7 @@ export const MobileToolbar = memo(function MobileToolbar({
                   <button
                     key={sLabel}
                     onClick={() => { onSetCanvasSize(w, h); }}
-                    className={`p-1.5 rounded transition-colors ${
+                    className={`p-1.5 rounded-lg transition-all active:scale-90 ${
                       canvasWidth === w && canvasHeight === h
                         ? 'bg-primary text-white'
                         : 'text-text-muted hover:bg-surface-hover'
@@ -136,17 +144,17 @@ export const MobileToolbar = memo(function MobileToolbar({
             )}
             {/* Background color */}
             {onSetBgColor && (
-              <div className="flex items-center gap-2 px-3 py-1.5">
+              <div className="flex items-center gap-2 px-3 py-2">
                 <span className="text-xs text-text-muted mr-auto">BG</span>
                 <input
                   type="color"
                   value={bgColor}
                   onChange={(e) => onSetBgColor(e.target.value)}
-                  className="w-7 h-7 rounded cursor-pointer border border-border"
+                  className="w-7 h-7 rounded-lg cursor-pointer border border-border"
                 />
               </div>
             )}
-            <div className="h-px bg-border my-1" />
+            <div className="h-px bg-border/40 my-1 mx-2" />
             <PopoverButton icon={Undo2} label="Undo" onClick={() => { onUndo(); setMoreOpen(false); }} disabled={!canUndo} />
             <PopoverButton icon={Redo2} label="Redo" onClick={() => { onRedo(); setMoreOpen(false); }} disabled={!canRedo} />
             <PopoverButton icon={Download} label="Export" onClick={() => { onExport(); setMoreOpen(false); }} />
@@ -155,7 +163,7 @@ export const MobileToolbar = memo(function MobileToolbar({
       )}
 
       {/* Main toolbar — single row, anchored to bottom */}
-      <div className="flex items-center justify-around px-2 py-2 bg-surface/90 backdrop-blur-md border-t border-border/50">
+      <div className="flex items-center justify-around px-2 py-1.5 bg-surface/95 backdrop-blur-xl border-t border-border/30">
         <ToolButton icon={Plus} label="Add" onClick={() => setAddMenuOpen(!addMenuOpen)} active={addMenuOpen} />
         <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
         <ToolButton
@@ -168,6 +176,14 @@ export const MobileToolbar = memo(function MobileToolbar({
         <ToolButton icon={Save} label="Save" onClick={onSave} primary />
         <ToolButton icon={MoreHorizontal} label="More" onClick={() => setMoreOpen(!moreOpen)} active={moreOpen} />
       </div>
+
+      {/* Inline keyframes for popover animation */}
+      <style>{`
+        @keyframes popUp {
+          from { opacity: 0; transform: translateY(8px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
     </div>
   );
 });
@@ -198,7 +214,7 @@ function ToolButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors min-h-[44px] min-w-[44px] px-2 ${
+      className={`flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all min-h-[48px] min-w-[48px] px-2 active:scale-90 ${
         highlighted
           ? 'text-primary bg-primary/10'
           : primary
@@ -231,7 +247,7 @@ function PopoverButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm rounded-lg transition-colors ${
+      className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm rounded-xl transition-all active:scale-[0.98] ${
         disabled ? 'text-text-muted opacity-40' : 'text-text-secondary hover:bg-surface-hover'
       }`}
     >
