@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Type, Minus, ChevronUp, ChevronDown, Trash2, Copy, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
@@ -12,7 +13,7 @@ interface LayerPanelProps {
   onToggleLock?: (id: string) => void;
 }
 
-export function LayerPanel({
+export const LayerPanel = memo(function LayerPanel({
   layers, selectedId, onSelect, onReorder, onDelete, onDuplicate,
   onToggleVisibility, onToggleLock,
 }: LayerPanelProps) {
@@ -101,4 +102,6 @@ export function LayerPanel({
       )}
     </div>
   );
-}
+});
+
+LayerPanel.displayName = 'LayerPanel';

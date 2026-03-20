@@ -72,11 +72,11 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
       <div
         className="absolute pointer-events-none"
         style={{
-          left: boxX,
-          top: boxY,
+          left: 0,
+          top: 0,
           width: boxW,
           height: boxH,
-          transform: layer.rotation !== 0 ? `rotate(${layer.rotation}deg)` : undefined,
+          transform: `translate(${boxX}px, ${boxY}px)${layer.rotation !== 0 ? ` rotate(${layer.rotation}deg)` : ''}`,
           transformOrigin: `${layer.width / 2 + padding}px ${height / 2 + padding}px`,
         }}
       >
@@ -184,7 +184,7 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
             {onDuplicate && (
               <button
                 className="flex items-center justify-center rounded-lg bg-surface/90 border border-border backdrop-blur-sm shadow-md"
-                style={{ width: 36, height: 36 }}
+                style={{ width: 44, height: 44 }}
                 onPointerDown={(e) => { e.stopPropagation(); onDuplicate(layer); }}
                 aria-label="Duplicate"
               >
@@ -194,7 +194,7 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
             {onDelete && (
               <button
                 className="flex items-center justify-center rounded-lg bg-surface/90 border border-border backdrop-blur-sm shadow-md"
-                style={{ width: 36, height: 36 }}
+                style={{ width: 44, height: 44 }}
                 onPointerDown={(e) => { e.stopPropagation(); onDelete(layer.id); }}
                 aria-label="Delete"
               >

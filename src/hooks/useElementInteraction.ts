@@ -27,15 +27,26 @@ interface UseElementInteractionOptions {
 
 type DragState =
   | { type: 'pending'; id: string; startX: number; startY: number; startTime: number }
-  | { type: 'move'; id: string; offsetX: number; offsetY: number }
-  | { type: 'resize'; id: string; handle: string; startX: number; startY: number; startWidth: number; startLayerX: number }
-  | { type: 'rotate'; id: string; centerX: number; centerY: number; startAngle: number }
+  | { type: 'move'; id: string; offsetX: number; offsetY: number; currentX: number; currentY: number }
+  | { type: 'resize'; id: string; handle: string; startX: number; startY: number; startWidth: number; startLayerX: number; currentWidth: number; currentLayerX: number }
+  | { type: 'rotate'; id: string; centerX: number; centerY: number; startAngle: number; currentRotation: number }
   | null;
 
 function estimateHeight(layer: TextLayer): number {
   const lines = layer.text.split('\n');
   const lineHeight = layer.fontSize * 1.3;
   return lines.length > 1 ? (lines.length - 1) * lineHeight + layer.fontSize : layer.fontSize;
+}
+
+/** Find the DOM element for a layer by data attribute */
+function findLayerElement(contentRef: React.RefObject<HTMLDivElement | null>, layerId: string): HTMLElement | null {
+  if (!contentRef.current) return null;
+  return contentRef.current.querySelector(`[data-layer-id="${layerId}"]`);
+}
+
+/** Apply transform directly to DOM element — zero re-renders */
+function applyPositionToDOM(el: HTMLElement, x: number, y: number, rotation?: number) {
+  el.style.transform = `translate(${x}px, ${y}px)${rotation ? ` rotate(${rotation}deg)` : ''}`;
 }
 
 export function useElementInteraction({
@@ -51,6 +62,8 @@ export function useElementInteraction({
   onEnterEditMode,
 }: UseElementInteractionOptions) {
   const dragRef = useRef<DragState>(null);
+  // Snap lines: ref for 60fps updates, state for React render on commit
+  const snapLinesRef = useRef<SnapLines>({ x: [], y: [] });
   const [snapLines, setSnapLines] = useState<SnapLines>({ x: [], y: [] });
   const lastElementTapRef = useRef<{ layerId: string; time: number }>({ layerId: '', time: 0 });
 
@@ -97,6 +110,20 @@ export function useElementInteraction({
 
     return { x: xSnaps, y: ySnaps };
   }, [layers, canvasWidth, canvasHeight]);
+
+  /** Update snap line DOM elements directly (avoid React re-render during drag) */
+  const updateSnapLinesDOM = useCallback((snaps: SnapLines) => {
+    snapLinesRef.current = snaps;
+    // We still need React to render snap lines, but throttle to avoid per-frame re-renders
+    // Only update state if snap lines actually changed
+    setSnapLines(prev => {
+      if (prev.x.length === snaps.x.length && prev.y.length === snaps.y.length &&
+          prev.x.every((v, i) => v === snaps.x[i]) && prev.y.every((v, i) => v === snaps.y[i])) {
+        return prev; // Same reference = no re-render
+      }
+      return snaps;
+    });
+  }, []);
 
   // Element pointer down — select and start potential drag
   const handleElementPointerDown = useCallback((e: React.PointerEvent, layerId: string) => {
@@ -156,6 +183,8 @@ export function useElementInteraction({
             id: drag.id,
             offsetX: layer.x - cx,
             offsetY: layer.y - cy,
+            currentX: layer.x,
+            currentY: layer.y,
           };
         }
         return;
@@ -166,7 +195,7 @@ export function useElementInteraction({
         const newY = Math.round(cy + drag.offsetY);
 
         const snaps = calcSnapLines(drag.id, newX, newY, layer.width, layer.fontSize);
-        setSnapLines(snaps);
+        updateSnapLinesDOM(snaps);
 
         // Snap apply
         let finalX = newX;
@@ -187,19 +216,38 @@ export function useElementInteraction({
           if ('vibrate' in navigator) navigator.vibrate([5, 5, 5]);
         }
 
-        onUpdateLayer(drag.id, { x: finalX, y: finalY });
+        // Direct DOM update — no React re-render
+        const el = findLayerElement(contentRef, drag.id);
+        if (el) {
+          applyPositionToDOM(el, finalX, finalY, layer.rotation || undefined);
+        }
+
+        // Store current position for commit on pointerup
+        drag.currentX = finalX;
+        drag.currentY = finalY;
       }
 
       if (drag.type === 'resize') {
         const deltaX = cx - drag.startX;
+        let newWidth: number;
+        let newX: number;
         if (drag.handle === 'ne' || drag.handle === 'se') {
-          const newWidth = Math.max(50, Math.round(drag.startWidth + deltaX));
-          onUpdateLayer(drag.id, { width: newWidth });
+          newWidth = Math.max(50, Math.round(drag.startWidth + deltaX));
+          newX = drag.startLayerX;
         } else {
-          const newWidth = Math.max(50, Math.round(drag.startWidth - deltaX));
-          const newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
-          onUpdateLayer(drag.id, { width: newWidth, x: newX });
+          newWidth = Math.max(50, Math.round(drag.startWidth - deltaX));
+          newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
         }
+
+        // Direct DOM update for width + position
+        const el = findLayerElement(contentRef, drag.id);
+        if (el) {
+          el.style.width = `${newWidth}px`;
+          applyPositionToDOM(el, newX, layer.y, layer.rotation || undefined);
+        }
+
+        drag.currentWidth = newWidth;
+        drag.currentLayerX = newX;
       }
 
       if (drag.type === 'rotate') {
@@ -216,12 +264,32 @@ export function useElementInteraction({
           }
         }
 
-        onUpdateLayer(drag.id, { rotation: Math.round(angle) });
+        const finalAngle = Math.round(angle);
+
+        // Direct DOM update
+        const el = findLayerElement(contentRef, drag.id);
+        if (el) {
+          applyPositionToDOM(el, layer.x, layer.y, finalAngle);
+        }
+
+        drag.currentRotation = finalAngle;
       }
     };
 
     const onUp = () => {
+      const drag = dragRef.current;
+
+      // Commit final position to React state (single update)
+      if (drag?.type === 'move') {
+        onUpdateLayer(drag.id, { x: drag.currentX, y: drag.currentY });
+      } else if (drag?.type === 'resize') {
+        onUpdateLayer(drag.id, { width: drag.currentWidth, x: drag.currentLayerX });
+      } else if (drag?.type === 'rotate') {
+        onUpdateLayer(drag.id, { rotation: drag.currentRotation });
+      }
+
       dragRef.current = null;
+      snapLinesRef.current = { x: [], y: [] };
       setSnapLines({ x: [], y: [] });
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
@@ -231,7 +299,7 @@ export function useElementInteraction({
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
-  }, [layers, selectedLayerId, clientToCanvas, onSelectLayer, onUpdateLayer, onLayerTapped, onEnterEditMode, calcSnapLines]);
+  }, [layers, selectedLayerId, clientToCanvas, contentRef, onSelectLayer, onUpdateLayer, onLayerTapped, onEnterEditMode, calcSnapLines, updateSnapLinesDOM]);
 
   // Handle pointer down on a selection handle
   const handleHandlePointerDown = useCallback((e: React.PointerEvent, handle: string) => {
@@ -255,6 +323,7 @@ export function useElementInteraction({
         centerX,
         centerY,
         startAngle,
+        currentRotation: layer.rotation,
       };
     } else {
       dragRef.current = {
@@ -265,10 +334,12 @@ export function useElementInteraction({
         startY: y,
         startWidth: layer.width,
         startLayerX: layer.x,
+        currentWidth: layer.width,
+        currentLayerX: layer.x,
       };
     }
 
-    // Same global listeners pattern
+    // Same global listeners pattern — direct DOM during drag, commit on up
     const onMove = (me: PointerEvent) => {
       const drag = dragRef.current;
       if (!drag) return;
@@ -277,14 +348,24 @@ export function useElementInteraction({
 
       if (drag.type === 'resize') {
         const deltaX = cx - drag.startX;
+        let newWidth: number;
+        let newX: number;
         if (drag.handle === 'ne' || drag.handle === 'se') {
-          const newWidth = Math.max(50, Math.round(drag.startWidth + deltaX));
-          onUpdateLayer(drag.id, { width: newWidth });
+          newWidth = Math.max(50, Math.round(drag.startWidth + deltaX));
+          newX = drag.startLayerX;
         } else {
-          const newWidth = Math.max(50, Math.round(drag.startWidth - deltaX));
-          const newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
-          onUpdateLayer(drag.id, { width: newWidth, x: newX });
+          newWidth = Math.max(50, Math.round(drag.startWidth - deltaX));
+          newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
         }
+
+        const el = findLayerElement(contentRef, drag.id);
+        if (el) {
+          el.style.width = `${newWidth}px`;
+          applyPositionToDOM(el, newX, layer.y, layer.rotation || undefined);
+        }
+
+        drag.currentWidth = newWidth;
+        drag.currentLayerX = newX;
       }
 
       if (drag.type === 'rotate') {
@@ -300,12 +381,28 @@ export function useElementInteraction({
           }
         }
 
-        onUpdateLayer(drag.id, { rotation: Math.round(angle) });
+        const finalAngle = Math.round(angle);
+        const el = findLayerElement(contentRef, drag.id);
+        if (el) {
+          applyPositionToDOM(el, layer.x, layer.y, finalAngle);
+        }
+
+        drag.currentRotation = finalAngle;
       }
     };
 
     const onUp = () => {
+      const drag = dragRef.current;
+
+      // Commit to React state
+      if (drag?.type === 'resize') {
+        onUpdateLayer(drag.id, { width: drag.currentWidth, x: drag.currentLayerX });
+      } else if (drag?.type === 'rotate') {
+        onUpdateLayer(drag.id, { rotation: drag.currentRotation });
+      }
+
       dragRef.current = null;
+      snapLinesRef.current = { x: [], y: [] };
       setSnapLines({ x: [], y: [] });
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
@@ -315,7 +412,7 @@ export function useElementInteraction({
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
-  }, [layers, selectedLayerId, clientToCanvas, onUpdateLayer]);
+  }, [layers, selectedLayerId, clientToCanvas, contentRef, onUpdateLayer]);
 
   return {
     snapLines,

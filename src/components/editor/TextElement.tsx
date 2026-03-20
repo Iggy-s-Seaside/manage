@@ -95,10 +95,11 @@ export const TextElement = memo<TextElementProps>(({
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       style={{
-        left: layer.x,
-        top: layer.y,
+        position: 'absolute',
+        left: 0,
+        top: 0,
         width: layer.width,
-        transform: layer.rotation !== 0 ? `rotate(${layer.rotation}deg)` : undefined,
+        transform: `translate(${layer.x}px, ${layer.y}px)${layer.rotation !== 0 ? ` rotate(${layer.rotation}deg)` : ''}`,
         transformOrigin: 'center center',
         fontFamily: layer.fontFamily,
         fontSize: layer.fontSize,

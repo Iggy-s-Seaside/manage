@@ -36,10 +36,12 @@ export const DividerElement = memo<DividerElementProps>(({
       className={`absolute select-none`}
       onPointerDown={handlePointerDown}
       style={{
-        left: layer.x,
-        top: layer.y,
+        position: 'absolute',
+        left: 0,
+        top: 0,
         width: layer.width,
         height: 30,
+        transform: `translate(${layer.x}px, ${layer.y}px)`,
         display: 'flex',
         alignItems: 'center',
         padding: `0 ${padding}px`,

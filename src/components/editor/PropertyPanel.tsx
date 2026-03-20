@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Trash2, Minus, Plus } from 'lucide-react';
 import type { TextLayer } from '../../types';
 import { BRAND_COLORS } from '../../types';
@@ -23,7 +23,7 @@ function toHex(color: string): string {
   return '#000000';
 }
 
-export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps) {
+export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const toggleFontStyle = (style: 'bold' | 'italic') => {
     const parts = layer.fontStyle.split(' ').filter(Boolean);
@@ -41,7 +41,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
       {/* Text Content */}
       <Section title={layer.elementType === 'divider' ? 'Label' : 'Text'}>
         <textarea
-          className="input-field min-h-[60px] resize-y text-xs"
+          className="input-field min-h-[60px] resize-y text-[13px]"
           value={layer.elementType === 'divider' ? (layer.dividerLabel ?? layer.text) : layer.text}
           onChange={(e) => {
             if (layer.elementType === 'divider') {
@@ -58,7 +58,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
         <Section title="Divider Line">
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div>
-              <label className="text-xs text-text-muted">Line Color</label>
+              <label className="text-[13px] text-text-muted">Line Color</label>
               <div className="flex items-center gap-2 mt-1">
                 <input
                   type="color"
@@ -69,12 +69,12 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
               </div>
             </div>
             <div>
-              <label className="text-xs text-text-muted">Thickness</label>
+              <label className="text-[13px] text-text-muted">Thickness</label>
               <input
                 type="number"
                 min={1}
                 max={10}
-                className="input-field text-xs"
+                className="input-field text-[13px]"
                 value={layer.dividerLineThickness ?? 1}
                 onChange={(e) => onUpdate({ dividerLineThickness: Number(e.target.value) })}
               />
@@ -82,7 +82,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
           </div>
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div>
-              <label className="text-xs text-text-muted">Line Opacity</label>
+              <label className="text-[13px] text-text-muted">Line Opacity</label>
               <input
                 type="range"
                 min={0}
@@ -94,19 +94,19 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
               />
             </div>
             <div>
-              <label className="text-xs text-text-muted">Gap</label>
+              <label className="text-[13px] text-text-muted">Gap</label>
               <input
                 type="number"
                 min={0}
                 max={60}
-                className="input-field text-xs"
+                className="input-field text-[13px]"
                 value={layer.dividerGap ?? 16}
                 onChange={(e) => onUpdate({ dividerGap: Number(e.target.value) })}
               />
             </div>
           </div>
           <div>
-            <label className="text-xs text-text-muted">Side Padding</label>
+            <label className="text-[13px] text-text-muted">Side Padding</label>
             <input
               type="range"
               min={0}
@@ -129,11 +129,11 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
         </div>
 
         <div className="mb-2">
-          <label className="text-xs text-text-muted">Size</label>
+          <label className="text-[13px] text-text-muted">Size</label>
           <div className="flex items-center gap-2 mt-1">
             <button
               onClick={() => onUpdate({ fontSize: Math.max(8, layer.fontSize - 2) })}
-              className="p-2 rounded-lg bg-surface-hover text-text-secondary hover:bg-surface-active transition-colors"
+              className="p-3 rounded-lg bg-surface-hover text-text-secondary hover:bg-surface-active transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Decrease font size"
             >
               <Minus size={14} />
@@ -148,7 +148,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
             />
             <button
               onClick={() => onUpdate({ fontSize: Math.min(400, layer.fontSize + 2) })}
-              className="p-2 rounded-lg bg-surface-hover text-text-secondary hover:bg-surface-active transition-colors"
+              className="p-3 rounded-lg bg-surface-hover text-text-secondary hover:bg-surface-active transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Increase font size"
             >
               <Plus size={14} />
@@ -168,32 +168,32 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
         </div>
 
         <div className="flex gap-1 mb-2">
-          <button onClick={() => toggleFontStyle('bold')} aria-label="Bold" className={`p-2.5 rounded-lg transition-colors ${isBold ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => toggleFontStyle('bold')} aria-label="Bold" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${isBold ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <Bold size={14} />
           </button>
-          <button onClick={() => toggleFontStyle('italic')} aria-label="Italic" className={`p-2.5 rounded-lg transition-colors ${isItalic ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => toggleFontStyle('italic')} aria-label="Italic" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${isItalic ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <Italic size={14} />
           </button>
-          <button onClick={() => onUpdate({ textDecoration: isUnderline ? '' : 'underline' })} aria-label="Underline" className={`p-2.5 rounded-lg transition-colors ${isUnderline ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => onUpdate({ textDecoration: isUnderline ? '' : 'underline' })} aria-label="Underline" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${isUnderline ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <Underline size={14} />
           </button>
           <div className="w-px bg-border mx-1" />
-          <button onClick={() => onUpdate({ align: 'left' })} aria-label="Align left" className={`p-2.5 rounded-lg transition-colors ${layer.align === 'left' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => onUpdate({ align: 'left' })} aria-label="Align left" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${layer.align === 'left' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <AlignLeft size={14} />
           </button>
-          <button onClick={() => onUpdate({ align: 'center' })} aria-label="Align center" className={`p-2.5 rounded-lg transition-colors ${layer.align === 'center' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => onUpdate({ align: 'center' })} aria-label="Align center" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${layer.align === 'center' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <AlignCenter size={14} />
           </button>
-          <button onClick={() => onUpdate({ align: 'right' })} aria-label="Align right" className={`p-2.5 rounded-lg transition-colors ${layer.align === 'right' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
+          <button onClick={() => onUpdate({ align: 'right' })} aria-label="Align right" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${layer.align === 'right' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
             <AlignRight size={14} />
           </button>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mb-2">
           <div>
-            <label className="text-xs text-text-muted">Weight</label>
+            <label className="text-[13px] text-text-muted">Weight</label>
             <select
-              className="input-field text-xs w-full"
+              className="input-field text-[13px] w-full"
               value={layer.fontWeight || 400}
               onChange={(e) => onUpdate({ fontWeight: Number(e.target.value) })}
             >
@@ -205,9 +205,9 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
             </select>
           </div>
           <div>
-            <label className="text-xs text-text-muted">Transform</label>
+            <label className="text-[13px] text-text-muted">Transform</label>
             <select
-              className="input-field text-xs w-full"
+              className="input-field text-[13px] w-full"
               value={layer.textTransform || 'none'}
               onChange={(e) => onUpdate({ textTransform: e.target.value as TextLayer['textTransform'] })}
             >
@@ -221,7 +221,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-text-muted">Letter Spacing</label>
+            <label className="text-[13px] text-text-muted">Letter Spacing</label>
             <input
               type="range"
               min={-5}
@@ -233,7 +233,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
             />
           </div>
           <div>
-            <label className="text-xs text-text-muted">Line Height</label>
+            <label className="text-[13px] text-text-muted">Line Height</label>
             <input
               type="range"
               min={0.8}
@@ -250,7 +250,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
       {/* Colors */}
       <Section title="Colors">
         <div className="mb-2">
-          <label className="text-xs text-text-muted">Fill Color</label>
+          <label className="text-[13px] text-text-muted">Fill Color</label>
           <div className="flex items-center gap-2 mt-1">
             <input
               type="color"
@@ -263,7 +263,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
                 <button
                   key={c}
                   onClick={() => onUpdate({ fill: c })}
-                  className={`w-9 h-9 rounded-full border-2 transition-transform hover:scale-110 ${layer.fill === c ? 'border-primary scale-110' : 'border-border'}`}
+                  className={`w-11 h-11 rounded-full border-2 transition-transform hover:scale-110 ${layer.fill === c ? 'border-primary scale-110' : 'border-border'}`}
                   style={{ backgroundColor: c }}
                 />
               ))}
@@ -273,7 +273,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-text-muted">Stroke Color</label>
+            <label className="text-[13px] text-text-muted">Stroke Color</label>
             <input
               type="color"
               value={layer.stroke || '#000000'}
@@ -282,12 +282,12 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
             />
           </div>
           <div>
-            <label className="text-xs text-text-muted">Stroke Width</label>
+            <label className="text-[13px] text-text-muted">Stroke Width</label>
             <input
               type="number"
               min={0}
               max={10}
-              className="input-field text-xs"
+              className="input-field text-[13px]"
               value={layer.strokeWidth}
               onChange={(e) => onUpdate({ strokeWidth: Number(e.target.value) })}
             />
@@ -299,7 +299,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
       <Section title="Shadow">
         <div className="grid grid-cols-2 gap-2 mb-2">
           <div>
-            <label className="text-xs text-text-muted">Color</label>
+            <label className="text-[13px] text-text-muted">Color</label>
             <input
               type="color"
               value={toHex(layer.shadowColor)}
@@ -308,7 +308,7 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
             />
           </div>
           <div>
-            <label className="text-xs text-text-muted">Blur</label>
+            <label className="text-[13px] text-text-muted">Blur</label>
             <input
               type="range"
               min={0}
@@ -321,12 +321,12 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-text-muted">Offset X</label>
-            <input type="number" className="input-field text-xs" value={layer.shadowOffsetX} onChange={(e) => onUpdate({ shadowOffsetX: Number(e.target.value) })} />
+            <label className="text-[13px] text-text-muted">Offset X</label>
+            <input type="number" className="input-field text-[13px]" value={layer.shadowOffsetX} onChange={(e) => onUpdate({ shadowOffsetX: Number(e.target.value) })} />
           </div>
           <div>
-            <label className="text-xs text-text-muted">Offset Y</label>
-            <input type="number" className="input-field text-xs" value={layer.shadowOffsetY} onChange={(e) => onUpdate({ shadowOffsetY: Number(e.target.value) })} />
+            <label className="text-[13px] text-text-muted">Offset Y</label>
+            <input type="number" className="input-field text-[13px]" value={layer.shadowOffsetY} onChange={(e) => onUpdate({ shadowOffsetY: Number(e.target.value) })} />
           </div>
         </div>
       </Section>
@@ -335,26 +335,26 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
       <Section title="Position">
         <div className="grid grid-cols-2 gap-2 mb-2">
           <div>
-            <label className="text-xs text-text-muted">X</label>
-            <input type="number" className="input-field text-xs" value={Math.round(layer.x)} onChange={(e) => onUpdate({ x: Number(e.target.value) })} />
+            <label className="text-[13px] text-text-muted">X</label>
+            <input type="number" className="input-field text-[13px]" value={Math.round(layer.x)} onChange={(e) => onUpdate({ x: Number(e.target.value) })} />
           </div>
           <div>
-            <label className="text-xs text-text-muted">Y</label>
-            <input type="number" className="input-field text-xs" value={Math.round(layer.y)} onChange={(e) => onUpdate({ y: Number(e.target.value) })} />
+            <label className="text-[13px] text-text-muted">Y</label>
+            <input type="number" className="input-field text-[13px]" value={Math.round(layer.y)} onChange={(e) => onUpdate({ y: Number(e.target.value) })} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 mb-2">
           <div>
-            <label className="text-xs text-text-muted">Width</label>
-            <input type="number" className="input-field text-xs" value={Math.round(layer.width)} onChange={(e) => onUpdate({ width: Number(e.target.value) })} />
+            <label className="text-[13px] text-text-muted">Width</label>
+            <input type="number" className="input-field text-[13px]" value={Math.round(layer.width)} onChange={(e) => onUpdate({ width: Number(e.target.value) })} />
           </div>
           <div>
-            <label className="text-xs text-text-muted">Rotation</label>
-            <input type="number" className="input-field text-xs" value={Math.round(layer.rotation)} onChange={(e) => onUpdate({ rotation: Number(e.target.value) })} />
+            <label className="text-[13px] text-text-muted">Rotation</label>
+            <input type="number" className="input-field text-[13px]" value={Math.round(layer.rotation)} onChange={(e) => onUpdate({ rotation: Number(e.target.value) })} />
           </div>
         </div>
         <div>
-          <label className="text-xs text-text-muted">Opacity</label>
+          <label className="text-[13px] text-text-muted">Opacity</label>
           <input
             type="range"
             min={0}
@@ -371,30 +371,32 @@ export function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps)
         <div className="flex gap-2">
           <button
             onClick={() => { onDelete(); setConfirmDelete(false); }}
-            className="btn-danger flex-1 text-xs"
+            className="btn-danger flex-1 text-[13px]"
           >
             Confirm Delete
           </button>
           <button
             onClick={() => setConfirmDelete(false)}
-            className="btn-secondary flex-1 text-xs"
+            className="btn-secondary flex-1 text-[13px]"
           >
             Cancel
           </button>
         </div>
       ) : (
-        <button onClick={() => setConfirmDelete(true)} className="btn-danger w-full text-xs" aria-label="Delete layer">
+        <button onClick={() => setConfirmDelete(true)} className="btn-danger w-full text-[13px]" aria-label="Delete layer">
           <Trash2 size={14} /> Delete Layer
         </button>
       )}
     </div>
   );
-}
+});
+
+PropertyPanel.displayName = 'PropertyPanel';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{title}</h4>
+      <h4 className="text-[13px] font-semibold text-text-muted uppercase tracking-wider mb-2">{title}</h4>
       {children}
     </div>
   );

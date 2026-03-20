@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import {
   Plus, Image, Upload, Layers, Sliders, SlidersHorizontal,
   Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate
@@ -34,7 +34,7 @@ interface MobileToolbarProps {
   activeSheet?: string | null;
 }
 
-export function MobileToolbar({
+export const MobileToolbar = memo(function MobileToolbar({
   onAddText,
   onOpenLibrary,
   onUpload,
@@ -60,7 +60,7 @@ export function MobileToolbar({
       <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border overflow-x-auto scrollbar-hide">
         <button
           onClick={() => onAddText()}
-          className="flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-medium"
+          className="flex items-center gap-1.5 shrink-0 px-3 min-h-[44px] rounded-full bg-primary text-white text-[13px] font-medium"
         >
           <Plus size={12} /> Text
         </button>
@@ -68,7 +68,7 @@ export function MobileToolbar({
           <button
             key={preset.label}
             onClick={() => onAddText(preset.overrides as Partial<TextLayer>)}
-            className="shrink-0 px-3 py-1.5 rounded-full bg-surface-hover text-text-secondary text-xs font-medium hover:bg-surface-active transition-colors"
+            className="shrink-0 px-3 min-h-[44px] rounded-full bg-surface-hover text-text-secondary text-[13px] font-medium hover:bg-surface-active transition-colors"
           >
             {preset.label}
           </button>
@@ -108,7 +108,9 @@ export function MobileToolbar({
       </div>
     </div>
   );
-}
+});
+
+MobileToolbar.displayName = 'MobileToolbar';
 
 function ToolButton({
   icon: Icon,
@@ -134,7 +136,7 @@ function ToolButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors w-12 ${
+      className={`flex flex-col items-center justify-center gap-0.5 p-1.5 rounded-lg transition-colors w-12 min-h-[44px] ${
         highlighted
           ? 'text-primary bg-primary/15'
           : primary
@@ -147,7 +149,7 @@ function ToolButton({
       }`}
     >
       {loading ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
-      <span className="text-[11px] leading-none">{label}</span>
+      <span className="text-[13px] leading-none">{label}</span>
     </button>
   );
 }

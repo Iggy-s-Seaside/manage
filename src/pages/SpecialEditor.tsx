@@ -509,7 +509,7 @@ export function SpecialEditor() {
         {/* Canvas size */}
         <button
           onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1080 })}
-          className={`p-1.5 rounded-lg transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          className={`p-2 rounded-lg transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
           title="Square (1080×1080)"
           aria-label="Square canvas"
         >
@@ -517,7 +517,7 @@ export function SpecialEditor() {
         </button>
         <button
           onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1350 })}
-          className={`p-1.5 rounded-lg transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1350 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          className={`p-2 rounded-lg transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1350 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
           title="Portrait (1080×1350)"
           aria-label="Portrait canvas"
         >
@@ -525,7 +525,7 @@ export function SpecialEditor() {
         </button>
         <button
           onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1080, height: 1920 })}
-          className={`p-1.5 rounded-lg transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1920 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          className={`p-2 rounded-lg transition-colors ${state.canvasWidth === 1080 && state.canvasHeight === 1920 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
           title="Story (1080×1920)"
           aria-label="Story canvas"
         >
@@ -533,7 +533,7 @@ export function SpecialEditor() {
         </button>
         <button
           onClick={() => dispatch({ type: 'SET_CANVAS_SIZE', width: 1920, height: 1080 })}
-          className={`p-1.5 rounded-lg transition-colors ${state.canvasWidth === 1920 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          className={`p-2 rounded-lg transition-colors ${state.canvasWidth === 1920 && state.canvasHeight === 1080 ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
           title="Landscape (1920×1080)"
           aria-label="Landscape canvas"
         >
@@ -542,7 +542,7 @@ export function SpecialEditor() {
         <button
           ref={customSizeRef}
           onClick={() => { setCustomWidth(state.canvasWidth); setCustomHeight(state.canvasHeight); setCustomSizeOpen(!customSizeOpen); }}
-          className={`p-1.5 rounded-lg transition-colors ${![[1080,1080],[1080,1350],[1080,1920],[1920,1080]].some(([w,h]) => state.canvasWidth === w && state.canvasHeight === h) ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
+          className={`p-2 rounded-lg transition-colors ${![[1080,1080],[1080,1350],[1080,1920],[1920,1080]].some(([w,h]) => state.canvasWidth === w && state.canvasHeight === h) ? 'bg-primary text-white' : 'bg-surface-hover text-text-muted'}`}
           title={`Custom (${state.canvasWidth}×${state.canvasHeight})`}
           aria-label="Custom canvas size"
         >
@@ -561,7 +561,7 @@ export function SpecialEditor() {
               <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Custom Size</h4>
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div>
-                  <label className="text-[11px] text-text-muted">Width</label>
+                  <label className="text-[13px] text-text-muted">Width</label>
                   <input
                     type="number"
                     min={256}
@@ -572,7 +572,7 @@ export function SpecialEditor() {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-text-muted">Height</label>
+                  <label className="text-[13px] text-text-muted">Height</label>
                   <input
                     type="number"
                     min={256}
@@ -649,7 +649,7 @@ export function SpecialEditor() {
             type="color"
             value={state.backgroundColor}
             onChange={(e) => dispatch({ type: 'SET_BACKGROUND_COLOR', color: e.target.value })}
-            className="w-7 h-7 rounded cursor-pointer border border-border"
+            className="w-8 h-8 rounded cursor-pointer border border-border"
           />
         </div>
 
@@ -913,7 +913,7 @@ export function SpecialEditor() {
                 JPEG
               </button>
             </div>
-            <p className="text-[11px] text-text-muted mt-1">
+            <p className="text-[13px] text-text-muted mt-1">
               {exportFormat === 'png' ? 'Lossless quality, larger file size. Best for graphics with text.' : 'Smaller file size, adjustable quality. Best for photos.'}
             </p>
           </div>
@@ -929,7 +929,7 @@ export function SpecialEditor() {
                 onChange={(e) => setExportQuality(Number(e.target.value))}
                 className="w-full accent-primary"
               />
-              <div className="flex justify-between text-[10px] text-text-muted mt-0.5">
+              <div className="flex justify-between text-[12px] text-text-muted mt-0.5">
                 <span>Smaller file</span>
                 <span>Best quality</span>
               </div>
@@ -1054,7 +1054,7 @@ export function SpecialEditor() {
               <option value="seasonal">Seasonal</option>
             </select>
           </div>
-          <p className="text-[11px] text-text-muted">Saves your current canvas layout as a reusable starting point.</p>
+          <p className="text-[13px] text-text-muted">Saves your current canvas layout as a reusable starting point.</p>
           <button
             onClick={handleSaveAsTemplate}
             disabled={savingTemplate || !templateForm.name.trim()}

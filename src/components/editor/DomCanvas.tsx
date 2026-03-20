@@ -78,9 +78,10 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
     }
   }, [state.layers]);
 
-  // Gesture system for zoom/pan
+  // Gesture system for zoom/pan — uses contentRef for direct DOM transform
   const gestures = useCanvasGestures({
     viewportRef,
+    contentRef,
     baseScale,
     canvasWidth: state.canvasWidth,
     canvasHeight: state.canvasHeight,
