@@ -1,5 +1,5 @@
 import { useState, memo } from 'react';
-import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Trash2, Minus, Plus } from 'lucide-react';
+import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Trash2, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 import { BRAND_COLORS } from '../../types';
 import { FontPicker } from './FontPicker';
@@ -10,7 +10,7 @@ interface PropertyPanelProps {
   onDelete: () => void;
 }
 
-/** Convert any CSS color (rgba, rgb, hex) to a hex string for <input type="color"> */
+/** Convert any CSS color to hex for <input type="color"> */
 function toHex(color: string): string {
   if (color.startsWith('#')) return color.length === 4 || color.length === 7 ? color : color.slice(0, 7);
   const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -23,8 +23,40 @@ function toHex(color: string): string {
   return '#000000';
 }
 
+// Reusable slider row with label and live value
+function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+  onChange: (v: number) => void;
+}) {
+  const display = step < 1 ? value.toFixed(step < 0.1 ? 2 : 1) : String(Math.round(value));
+  return (
+    <div className="mb-3">
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-xs text-text-muted">{label}</label>
+        <span className="text-xs font-medium text-text-secondary tabular-nums">{display}{unit}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-primary h-2"
+      />
+    </div>
+  );
+}
+
 export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const toggleFontStyle = (style: 'bold' | 'italic') => {
     const parts = layer.fontStyle.split(' ').filter(Boolean);
     const has = parts.includes(style);
@@ -38,7 +70,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
 
   return (
     <div className="space-y-5 text-sm">
-      {/* Text Content */}
+      {/* ─── Text Content ─── */}
       <Section title={layer.elementType === 'divider' ? 'Label' : 'Text'}>
         <textarea
           className="input-field min-h-[60px] resize-y text-[13px]"
@@ -53,217 +85,68 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
         />
       </Section>
 
-      {/* Divider-specific properties */}
+      {/* ─── Divider-specific ─── */}
       {layer.elementType === 'divider' && (
         <Section title="Divider Line">
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <div>
-              <label className="text-[13px] text-text-muted">Line Color</label>
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  type="color"
-                  value={layer.dividerLineColor || layer.fill}
-                  onChange={(e) => onUpdate({ dividerLineColor: e.target.value })}
-                  className="w-8 h-8 rounded cursor-pointer border border-border"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-[13px] text-text-muted">Thickness</label>
-              <input
-                type="number"
-                min={1}
-                max={10}
-                className="input-field text-[13px]"
-                value={layer.dividerLineThickness ?? 1}
-                onChange={(e) => onUpdate({ dividerLineThickness: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <div>
-              <label className="text-[13px] text-text-muted">Line Opacity</label>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={layer.dividerLineOpacity ?? 0.4}
-                onChange={(e) => onUpdate({ dividerLineOpacity: Number(e.target.value) })}
-                className="w-full accent-primary"
-              />
-            </div>
-            <div>
-              <label className="text-[13px] text-text-muted">Gap</label>
-              <input
-                type="number"
-                min={0}
-                max={60}
-                className="input-field text-[13px]"
-                value={layer.dividerGap ?? 16}
-                onChange={(e) => onUpdate({ dividerGap: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-[13px] text-text-muted">Side Padding</label>
+          <div className="flex items-center gap-2 mb-3">
+            <label className="text-xs text-text-muted">Color</label>
             <input
-              type="range"
-              min={0}
-              max={200}
-              value={layer.dividerPadding ?? 40}
-              onChange={(e) => onUpdate({ dividerPadding: Number(e.target.value) })}
-              className="w-full accent-primary"
+              type="color"
+              value={layer.dividerLineColor || layer.fill}
+              onChange={(e) => onUpdate({ dividerLineColor: e.target.value })}
+              className="w-8 h-8 rounded cursor-pointer border border-border ml-auto"
             />
           </div>
+          <SliderRow label="Thickness" value={layer.dividerLineThickness ?? 1} min={1} max={10} onChange={(v) => onUpdate({ dividerLineThickness: v })} />
+          <SliderRow label="Opacity" value={layer.dividerLineOpacity ?? 0.4} min={0} max={1} step={0.05} onChange={(v) => onUpdate({ dividerLineOpacity: v })} />
+          <SliderRow label="Gap" value={layer.dividerGap ?? 16} min={0} max={60} onChange={(v) => onUpdate({ dividerGap: v })} />
+          <SliderRow label="Side Padding" value={layer.dividerPadding ?? 40} min={0} max={200} onChange={(v) => onUpdate({ dividerPadding: v })} />
         </Section>
       )}
 
-      {/* Typography */}
+      {/* ─── Typography ─── */}
       <Section title="Typography">
-        <div className="mb-2">
+        <div className="mb-3">
           <FontPicker
             value={layer.fontFamily}
             onChange={(font) => onUpdate({ fontFamily: font })}
           />
         </div>
 
-        <div className="mb-2">
-          <label className="text-[13px] text-text-muted">Size</label>
-          <div className="flex items-center gap-2 mt-1">
-            <button
-              onClick={() => onUpdate({ fontSize: Math.max(8, layer.fontSize - 2) })}
-              className="p-3 rounded-lg bg-surface-hover text-text-secondary hover:bg-surface-active transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-              aria-label="Decrease font size"
-            >
-              <Minus size={14} />
-            </button>
-            <input
-              type="range"
-              min={8}
-              max={200}
-              value={layer.fontSize}
-              onChange={(e) => onUpdate({ fontSize: Number(e.target.value) })}
-              className="flex-1 accent-primary"
-            />
-            <button
-              onClick={() => onUpdate({ fontSize: Math.min(400, layer.fontSize + 2) })}
-              className="p-3 rounded-lg bg-surface-hover text-text-secondary hover:bg-surface-active transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-              aria-label="Increase font size"
-            >
-              <Plus size={14} />
-            </button>
-            <input
-              type="number"
-              min={8}
-              max={400}
-              className="input-field w-14 text-xs text-center"
-              value={layer.fontSize}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 1 && v <= 400) onUpdate({ fontSize: v });
-              }}
-            />
-          </div>
-        </div>
+        <SliderRow label="Size" value={layer.fontSize} min={8} max={200} unit="px" onChange={(v) => onUpdate({ fontSize: v })} />
 
-        <div className="flex gap-1 mb-2">
-          <button onClick={() => toggleFontStyle('bold')} aria-label="Bold" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${isBold ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
-            <Bold size={14} />
-          </button>
-          <button onClick={() => toggleFontStyle('italic')} aria-label="Italic" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${isItalic ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
-            <Italic size={14} />
-          </button>
-          <button onClick={() => onUpdate({ textDecoration: isUnderline ? '' : 'underline' })} aria-label="Underline" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${isUnderline ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
-            <Underline size={14} />
-          </button>
+        {/* Style buttons */}
+        <div className="flex gap-1 mb-3">
+          <StyleButton active={isBold} onClick={() => toggleFontStyle('bold')} label="Bold"><Bold size={14} /></StyleButton>
+          <StyleButton active={isItalic} onClick={() => toggleFontStyle('italic')} label="Italic"><Italic size={14} /></StyleButton>
+          <StyleButton active={isUnderline} onClick={() => onUpdate({ textDecoration: isUnderline ? '' : 'underline' })} label="Underline"><Underline size={14} /></StyleButton>
           <div className="w-px bg-border mx-1" />
-          <button onClick={() => onUpdate({ align: 'left' })} aria-label="Align left" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${layer.align === 'left' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
-            <AlignLeft size={14} />
-          </button>
-          <button onClick={() => onUpdate({ align: 'center' })} aria-label="Align center" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${layer.align === 'center' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
-            <AlignCenter size={14} />
-          </button>
-          <button onClick={() => onUpdate({ align: 'right' })} aria-label="Align right" className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${layer.align === 'right' ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'}`}>
-            <AlignRight size={14} />
-          </button>
+          <StyleButton active={layer.align === 'left'} onClick={() => onUpdate({ align: 'left' })} label="Left"><AlignLeft size={14} /></StyleButton>
+          <StyleButton active={layer.align === 'center'} onClick={() => onUpdate({ align: 'center' })} label="Center"><AlignCenter size={14} /></StyleButton>
+          <StyleButton active={layer.align === 'right'} onClick={() => onUpdate({ align: 'right' })} label="Right"><AlignRight size={14} /></StyleButton>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <div>
-            <label className="text-[13px] text-text-muted">Weight</label>
-            <select
-              className="input-field text-[13px] w-full"
-              value={layer.fontWeight || 400}
-              onChange={(e) => onUpdate({ fontWeight: Number(e.target.value) })}
-            >
-              <option value={300}>Light (300)</option>
-              <option value={400}>Regular (400)</option>
-              <option value={500}>Medium (500)</option>
-              <option value={600}>Semi-bold (600)</option>
-              <option value={700}>Bold (700)</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-[13px] text-text-muted">Transform</label>
-            <select
-              className="input-field text-[13px] w-full"
-              value={layer.textTransform || 'none'}
-              onChange={(e) => onUpdate({ textTransform: e.target.value as TextLayer['textTransform'] })}
-            >
-              <option value="none">None</option>
-              <option value="uppercase">UPPERCASE</option>
-              <option value="lowercase">lowercase</option>
-              <option value="capitalize">Capitalize</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[13px] text-text-muted">Letter Spacing</label>
-            <input
-              type="range"
-              min={-5}
-              max={30}
-              step={0.5}
-              value={layer.letterSpacing}
-              onChange={(e) => onUpdate({ letterSpacing: Number(e.target.value) })}
-              className="w-full accent-primary"
-            />
-          </div>
-          <div>
-            <label className="text-[13px] text-text-muted">Line Height</label>
-            <input
-              type="range"
-              min={0.8}
-              max={3}
-              step={0.1}
-              value={layer.lineHeight || 1.3}
-              onChange={(e) => onUpdate({ lineHeight: Number(e.target.value) })}
-              className="w-full accent-primary"
-            />
-          </div>
-        </div>
+        <SliderRow label="Letter Spacing" value={layer.letterSpacing} min={-5} max={30} step={0.5} onChange={(v) => onUpdate({ letterSpacing: v })} />
+        <SliderRow label="Line Height" value={layer.lineHeight || 1.3} min={0.8} max={3} step={0.1} unit="×" onChange={(v) => onUpdate({ lineHeight: v })} />
       </Section>
 
-      {/* Colors */}
+      {/* ─── Colors ─── */}
       <Section title="Colors">
-        <div className="mb-2">
-          <label className="text-[13px] text-text-muted">Fill Color</label>
-          <div className="flex items-center gap-2 mt-1">
+        <div className="mb-3">
+          <label className="text-xs text-text-muted mb-1 block">Fill Color</label>
+          <div className="flex items-center gap-2">
             <input
               type="color"
               value={layer.fill}
               onChange={(e) => onUpdate({ fill: e.target.value })}
               className="w-8 h-8 rounded cursor-pointer border border-border"
             />
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap">
               {BRAND_COLORS.map((c) => (
                 <button
                   key={c}
                   onClick={() => onUpdate({ fill: c })}
-                  className={`w-11 h-11 rounded-full border-2 transition-transform hover:scale-110 ${layer.fill === c ? 'border-primary scale-110' : 'border-border'}`}
+                  className={`w-9 h-9 rounded-full border-2 transition-transform hover:scale-110 ${layer.fill === c ? 'border-primary scale-110' : 'border-border'}`}
                   style={{ backgroundColor: c }}
                 />
               ))}
@@ -271,116 +154,142 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[13px] text-text-muted">Stroke Color</label>
-            <input
-              type="color"
-              value={layer.stroke || '#000000'}
-              onChange={(e) => onUpdate({ stroke: e.target.value })}
-              className="w-full h-8 rounded cursor-pointer border border-border"
-            />
-          </div>
-          <div>
-            <label className="text-[13px] text-text-muted">Stroke Width</label>
-            <input
-              type="number"
-              min={0}
-              max={10}
-              className="input-field text-[13px]"
-              value={layer.strokeWidth}
-              onChange={(e) => onUpdate({ strokeWidth: Number(e.target.value) })}
-            />
-          </div>
-        </div>
-      </Section>
-
-      {/* Effects */}
-      <Section title="Shadow">
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <div>
-            <label className="text-[13px] text-text-muted">Color</label>
-            <input
-              type="color"
-              value={toHex(layer.shadowColor)}
-              onChange={(e) => onUpdate({ shadowColor: e.target.value })}
-              className="w-full h-8 rounded cursor-pointer border border-border"
-            />
-          </div>
-          <div>
-            <label className="text-[13px] text-text-muted">Blur</label>
-            <input
-              type="range"
-              min={0}
-              max={30}
-              value={layer.shadowBlur}
-              onChange={(e) => onUpdate({ shadowBlur: Number(e.target.value) })}
-              className="w-full accent-primary"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[13px] text-text-muted">Offset X</label>
-            <input type="number" className="input-field text-[13px]" value={layer.shadowOffsetX} onChange={(e) => onUpdate({ shadowOffsetX: Number(e.target.value) })} />
-          </div>
-          <div>
-            <label className="text-[13px] text-text-muted">Offset Y</label>
-            <input type="number" className="input-field text-[13px]" value={layer.shadowOffsetY} onChange={(e) => onUpdate({ shadowOffsetY: Number(e.target.value) })} />
-          </div>
-        </div>
-      </Section>
-
-      {/* Position */}
-      <Section title="Position">
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <div>
-            <label className="text-[13px] text-text-muted">X</label>
-            <input type="number" className="input-field text-[13px]" value={Math.round(layer.x)} onChange={(e) => onUpdate({ x: Number(e.target.value) })} />
-          </div>
-          <div>
-            <label className="text-[13px] text-text-muted">Y</label>
-            <input type="number" className="input-field text-[13px]" value={Math.round(layer.y)} onChange={(e) => onUpdate({ y: Number(e.target.value) })} />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <div>
-            <label className="text-[13px] text-text-muted">Width</label>
-            <input type="number" className="input-field text-[13px]" value={Math.round(layer.width)} onChange={(e) => onUpdate({ width: Number(e.target.value) })} />
-          </div>
-          <div>
-            <label className="text-[13px] text-text-muted">Rotation</label>
-            <input type="number" className="input-field text-[13px]" value={Math.round(layer.rotation)} onChange={(e) => onUpdate({ rotation: Number(e.target.value) })} />
-          </div>
-        </div>
-        <div>
-          <label className="text-[13px] text-text-muted">Opacity</label>
+        <div className="flex items-center gap-2 mb-2">
+          <label className="text-xs text-text-muted">Stroke</label>
           <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={layer.opacity}
-            onChange={(e) => onUpdate({ opacity: Number(e.target.value) })}
-            className="w-full accent-primary"
+            type="color"
+            value={layer.stroke || '#000000'}
+            onChange={(e) => onUpdate({ stroke: e.target.value })}
+            className="w-7 h-7 rounded cursor-pointer border border-border"
           />
         </div>
+        <SliderRow label="Stroke Width" value={layer.strokeWidth} min={0} max={10} step={0.5} unit="px" onChange={(v) => onUpdate({ strokeWidth: v })} />
+        <SliderRow label="Opacity" value={layer.opacity} min={0} max={1} step={0.05} onChange={(v) => onUpdate({ opacity: v })} />
       </Section>
 
+      {/* ─── Shadow ─── */}
+      <Section title="Shadow">
+        <div className="flex items-center gap-2 mb-2">
+          <label className="text-xs text-text-muted">Color</label>
+          <input
+            type="color"
+            value={toHex(layer.shadowColor)}
+            onChange={(e) => onUpdate({ shadowColor: e.target.value })}
+            className="w-7 h-7 rounded cursor-pointer border border-border"
+          />
+        </div>
+        <SliderRow label="Blur" value={layer.shadowBlur} min={0} max={30} onChange={(v) => onUpdate({ shadowBlur: v })} />
+        <SliderRow label="Offset X" value={layer.shadowOffsetX} min={-30} max={30} onChange={(v) => onUpdate({ shadowOffsetX: v })} />
+        <SliderRow label="Offset Y" value={layer.shadowOffsetY} min={-30} max={30} onChange={(v) => onUpdate({ shadowOffsetY: v })} />
+      </Section>
+
+      {/* ─── Position (sliders) ─── */}
+      <Section title="Position">
+        <SliderRow label="X" value={Math.round(layer.x)} min={0} max={1080} onChange={(v) => onUpdate({ x: v })} />
+        <SliderRow label="Y" value={Math.round(layer.y)} min={0} max={1920} onChange={(v) => onUpdate({ y: v })} />
+        <SliderRow label="Width" value={Math.round(layer.width)} min={50} max={1080} onChange={(v) => onUpdate({ width: v })} />
+        <SliderRow label="Rotation" value={Math.round(layer.rotation)} min={0} max={360} unit="°" onChange={(v) => onUpdate({ rotation: v })} />
+      </Section>
+
+      {/* ─── Advanced toggle ─── */}
+      <button
+        onClick={() => setShowAdvanced(!showAdvanced)}
+        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg bg-surface-hover text-text-muted text-xs font-medium uppercase tracking-wider hover:bg-surface-active transition-colors"
+      >
+        <Settings2 size={14} />
+        Advanced
+        {showAdvanced ? <ChevronUp size={14} className="ml-auto" /> : <ChevronDown size={14} className="ml-auto" />}
+      </button>
+
+      {showAdvanced && (
+        <div className="space-y-3 pt-1">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-text-muted">Weight</label>
+              <select
+                className="input-field text-[13px] w-full"
+                value={layer.fontWeight || 400}
+                onChange={(e) => onUpdate({ fontWeight: Number(e.target.value) })}
+              >
+                <option value={300}>Light (300)</option>
+                <option value={400}>Regular (400)</option>
+                <option value={500}>Medium (500)</option>
+                <option value={600}>Semi-bold (600)</option>
+                <option value={700}>Bold (700)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Transform</label>
+              <select
+                className="input-field text-[13px] w-full"
+                value={layer.textTransform || 'none'}
+                onChange={(e) => onUpdate({ textTransform: e.target.value as TextLayer['textTransform'] })}
+              >
+                <option value="none">None</option>
+                <option value="uppercase">UPPERCASE</option>
+                <option value="lowercase">lowercase</option>
+                <option value="capitalize">Capitalize</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-text-muted">Font Size (exact)</label>
+              <input type="number" min={1} max={400} className="input-field text-[13px]" value={layer.fontSize} onChange={(e) => { const v = Number(e.target.value); if (v >= 1 && v <= 400) onUpdate({ fontSize: v }); }} />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Letter Spacing</label>
+              <input type="number" step={0.5} className="input-field text-[13px]" value={layer.letterSpacing} onChange={(e) => onUpdate({ letterSpacing: Number(e.target.value) })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-text-muted">X (exact)</label>
+              <input type="number" className="input-field text-[13px]" value={Math.round(layer.x)} onChange={(e) => onUpdate({ x: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Y (exact)</label>
+              <input type="number" className="input-field text-[13px]" value={Math.round(layer.y)} onChange={(e) => onUpdate({ y: Number(e.target.value) })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-text-muted">Width (exact)</label>
+              <input type="number" className="input-field text-[13px]" value={Math.round(layer.width)} onChange={(e) => onUpdate({ width: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Rotation (exact)</label>
+              <input type="number" className="input-field text-[13px]" value={Math.round(layer.rotation)} onChange={(e) => onUpdate({ rotation: Number(e.target.value) })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-text-muted">Stroke Width</label>
+              <input type="number" min={0} max={20} step={0.5} className="input-field text-[13px]" value={layer.strokeWidth} onChange={(e) => onUpdate({ strokeWidth: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Shadow Blur</label>
+              <input type="number" min={0} max={50} className="input-field text-[13px]" value={layer.shadowBlur} onChange={(e) => onUpdate({ shadowBlur: Number(e.target.value) })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-text-muted">Shadow X</label>
+              <input type="number" className="input-field text-[13px]" value={layer.shadowOffsetX} onChange={(e) => onUpdate({ shadowOffsetX: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Shadow Y</label>
+              <input type="number" className="input-field text-[13px]" value={layer.shadowOffsetY} onChange={(e) => onUpdate({ shadowOffsetY: Number(e.target.value) })} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Delete ─── */}
       {confirmDelete ? (
         <div className="flex gap-2">
-          <button
-            onClick={() => { onDelete(); setConfirmDelete(false); }}
-            className="btn-danger flex-1 text-[13px]"
-          >
-            Confirm Delete
-          </button>
-          <button
-            onClick={() => setConfirmDelete(false)}
-            className="btn-secondary flex-1 text-[13px]"
-          >
-            Cancel
-          </button>
+          <button onClick={() => { onDelete(); setConfirmDelete(false); }} className="btn-danger flex-1 text-[13px]">Confirm Delete</button>
+          <button onClick={() => setConfirmDelete(false)} className="btn-secondary flex-1 text-[13px]">Cancel</button>
         </div>
       ) : (
         <button onClick={() => setConfirmDelete(true)} className="btn-danger w-full text-[13px]" aria-label="Delete layer">
@@ -396,8 +305,22 @@ PropertyPanel.displayName = 'PropertyPanel';
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="text-[13px] font-semibold text-text-muted uppercase tracking-wider mb-2">{title}</h4>
+      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{title}</h4>
       {children}
     </div>
+  );
+}
+
+function StyleButton({ active, onClick, label, children }: { active: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className={`p-3 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
+        active ? 'bg-primary text-white' : 'bg-surface-hover text-text-secondary hover:bg-surface-active'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
