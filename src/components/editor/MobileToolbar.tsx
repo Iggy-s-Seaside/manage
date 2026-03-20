@@ -2,7 +2,7 @@ import { useState, memo } from 'react';
 import {
   Plus, Image, Upload, Layers, Sliders, SlidersHorizontal,
   Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate,
-  Square, RectangleVertical, RectangleHorizontal, Palette
+  Square, RectangleVertical, RectangleHorizontal
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
