@@ -248,6 +248,82 @@ function drawDividerToCtx(ctx: CanvasRenderingContext2D, layer: TextLayer) {
 }
 
 /**
+ * Draw an image layer element to the canvas context (synchronous — requires pre-loaded image).
+ */
+function drawImageLayerToCtx(ctx: CanvasRenderingContext2D, layer: TextLayer) {
+  if (!layer.imageSrc) return;
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = layer.imageSrc;
+
+  // Only works if the image is already cached/loaded (data URLs are always synchronous)
+  if (!img.complete || img.naturalWidth === 0) return;
+
+  ctx.save();
+  ctx.globalAlpha = layer.opacity;
+
+  const layerW = layer.width;
+  const layerH = layer.imageHeight || layer.width;
+  const centerX = layer.x + layerW / 2;
+  const centerY = layer.y + layerH / 2;
+
+  if (layer.rotation !== 0) {
+    ctx.translate(centerX, centerY);
+    ctx.rotate((layer.rotation * Math.PI) / 180);
+    ctx.translate(-centerX, -centerY);
+  }
+
+  // Apply per-layer image filters
+  if (layer.imageFilters) {
+    const filterStr = buildFilterString(layer.imageFilters);
+    if (filterStr !== 'none') ctx.filter = filterStr;
+  }
+
+  // Draw the image with appropriate fit
+  const fit = layer.imageFit || 'cover';
+  if (fit === 'cover') {
+    // Cover: scale to fill, center-crop
+    const imgRatio = img.naturalWidth / img.naturalHeight;
+    const layerRatio = layerW / layerH;
+    let srcX = 0, srcY = 0, srcW = img.naturalWidth, srcH = img.naturalHeight;
+    if (imgRatio > layerRatio) {
+      srcW = img.naturalHeight * layerRatio;
+      srcX = (img.naturalWidth - srcW) / 2;
+    } else {
+      srcH = img.naturalWidth / layerRatio;
+      srcY = (img.naturalHeight - srcH) / 2;
+    }
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, layer.x, layer.y, layerW, layerH);
+  } else if (fit === 'contain') {
+    const imgRatio = img.naturalWidth / img.naturalHeight;
+    const layerRatio = layerW / layerH;
+    let drawW = layerW, drawH = layerH;
+    if (imgRatio > layerRatio) {
+      drawH = layerW / imgRatio;
+    } else {
+      drawW = layerH * imgRatio;
+    }
+    const drawX = layer.x + (layerW - drawW) / 2;
+    const drawY = layer.y + (layerH - drawH) / 2;
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+  } else {
+    ctx.drawImage(img, layer.x, layer.y, layerW, layerH);
+  }
+
+  ctx.filter = 'none';
+
+  // Overlay color
+  if (layer.imageFilters && layer.imageFilters.overlayOpacity > 0) {
+    ctx.globalAlpha = layer.opacity * layer.imageFilters.overlayOpacity;
+    ctx.fillStyle = layer.imageFilters.overlayColor;
+    ctx.fillRect(layer.x, layer.y, layerW, layerH);
+  }
+
+  ctx.restore();
+}
+
+/**
  * Synchronously render the editor state to an off-screen canvas.
  * Returns the canvas element for toDataURL() or toBlob().
  *
@@ -310,6 +386,8 @@ export function exportToCanvas(state: EditorState): HTMLCanvasElement {
     if (!layer.visible) continue;
     if (layer.elementType === 'divider') {
       drawDividerToCtx(ctx, layer);
+    } else if (layer.elementType === 'image') {
+      drawImageLayerToCtx(ctx, layer);
     } else {
       drawLayerToCtx(ctx, layer);
     }
@@ -370,10 +448,16 @@ export async function exportToCanvasAsync(state: EditorState): Promise<HTMLCanva
     ctx.fillRect(0, 0, w, h);
   }
 
-  // 4. Text layers
+  // 4. Canvas elements (visible only)
   for (const layer of state.layers) {
     if (!layer.visible) continue;
-    drawLayerToCtx(ctx, layer);
+    if (layer.elementType === 'divider') {
+      drawDividerToCtx(ctx, layer);
+    } else if (layer.elementType === 'image') {
+      drawImageLayerToCtx(ctx, layer);
+    } else {
+      drawLayerToCtx(ctx, layer);
+    }
   }
 
   return canvas;

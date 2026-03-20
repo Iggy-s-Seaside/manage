@@ -1,7 +1,7 @@
 import { useState, memo } from 'react';
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Trash2, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import type { TextLayer } from '../../types';
-import { BRAND_COLORS } from '../../types';
+import { BRAND_COLORS, DEFAULT_IMAGE_FILTERS } from '../../types';
 import { FontPicker } from './FontPicker';
 
 interface PropertyPanelProps {
@@ -283,6 +283,50 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
             </div>
           </div>
         </div>
+      )}
+
+      {/* ─── Image Layer Properties ─── */}
+      {layer.elementType === 'image' && (
+        <Section title="Image Filters">
+          <SliderRow label="Brightness" value={(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS).brightness} min={0} max={200} unit="%" onChange={(v) => onUpdate({ imageFilters: { ...(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS), brightness: v } })} />
+          <SliderRow label="Contrast" value={(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS).contrast} min={0} max={200} unit="%" onChange={(v) => onUpdate({ imageFilters: { ...(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS), contrast: v } })} />
+          <SliderRow label="Saturation" value={(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS).saturation} min={0} max={200} unit="%" onChange={(v) => onUpdate({ imageFilters: { ...(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS), saturation: v } })} />
+          <SliderRow label="Blur" value={(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS).blur} min={0} max={20} step={0.5} unit="px" onChange={(v) => onUpdate({ imageFilters: { ...(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS), blur: v } })} />
+          <div className="flex items-center gap-2 mb-3">
+            <label className="text-xs text-text-muted">Overlay</label>
+            <input
+              type="color"
+              value={(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS).overlayColor}
+              onChange={(e) => onUpdate({ imageFilters: { ...(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS), overlayColor: e.target.value } })}
+              className="w-7 h-7 rounded-lg cursor-pointer border border-border ml-auto"
+            />
+          </div>
+          <SliderRow label="Overlay Opacity" value={(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS).overlayOpacity} min={0} max={1} step={0.05} onChange={(v) => onUpdate({ imageFilters: { ...(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS), overlayOpacity: v } })} />
+          <div className="flex items-center gap-2 mb-3">
+            <label className="text-xs text-text-muted">Fit</label>
+            <div className="flex gap-1 ml-auto">
+              {(['cover', 'contain', 'fill'] as const).map((fit) => (
+                <button
+                  key={fit}
+                  onClick={() => onUpdate({ imageFit: fit })}
+                  className={`px-2.5 py-1 text-xs rounded-lg transition-all ${
+                    (layer.imageFit || 'cover') === fit
+                      ? 'bg-primary text-white'
+                      : 'bg-surface-hover text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  {fit.charAt(0).toUpperCase() + fit.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={() => onUpdate({ imageFilters: { ...DEFAULT_IMAGE_FILTERS } })}
+            className="text-xs text-primary hover:text-primary-hover transition-colors"
+          >
+            Reset Filters
+          </button>
+        </Section>
       )}
 
       {/* ─── Delete ─── */}

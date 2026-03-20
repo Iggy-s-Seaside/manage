@@ -105,7 +105,7 @@ export const DEFAULT_IMAGE_FILTERS: ImageFilters = {
 
 export interface TextLayer {
   id: string;
-  elementType?: 'text' | 'divider'; // default 'text'
+  elementType?: 'text' | 'divider' | 'image'; // default 'text'
   text: string;
   x: number;
   y: number;
@@ -137,6 +137,11 @@ export interface TextLayer {
   dividerLineThickness?: number; // px, default 1
   dividerPadding?: number;       // Horizontal padding from edges, default 40
   dividerGap?: number;           // Gap between label and lines, default 16
+  // Image-specific fields (used when elementType === 'image')
+  imageSrc?: string;             // URL or data URL of the image
+  imageHeight?: number;          // Explicit height (images have height, text doesn't)
+  imageFilters?: ImageFilters;   // Per-layer image filters
+  imageFit?: 'cover' | 'contain' | 'fill'; // How image fills its bounds
 }
 
 export interface EditorState {

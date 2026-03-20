@@ -18,6 +18,7 @@ const TEXT_PRESETS = [
 
 interface MobileToolbarProps {
   onAddText: (overrides?: Partial<TextLayer>) => void;
+  onAddImage: () => void;
   onOpenLibrary: () => void;
   onUpload: () => void;
   onOpenLayers: () => void;
@@ -44,6 +45,7 @@ interface MobileToolbarProps {
 
 export const MobileToolbar = memo(function MobileToolbar({
   onAddText,
+  onAddImage,
   onOpenLibrary,
   onUpload,
   onOpenLayers,
@@ -102,6 +104,13 @@ export const MobileToolbar = memo(function MobileToolbar({
                 <span className="w-4" /> {preset.label}
               </button>
             ))}
+            <div className="h-px bg-border/40 my-1 mx-2" />
+            <button
+              onClick={() => { onAddImage(); setAddMenuOpen(false); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-text-secondary hover:bg-surface-hover rounded-xl transition-colors active:scale-[0.98]"
+            >
+              <Image size={16} className="text-primary" /> Image Layer
+            </button>
           </div>
         </>
       )}

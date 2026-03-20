@@ -11,6 +11,7 @@ import type { EditorState, TextLayer } from '../../types';
 import { BackgroundLayer } from './BackgroundLayer';
 import { TextElement } from './TextElement';
 import { DividerElement } from './DividerElement';
+import { ImageElement } from './ImageElement';
 import { SelectionOverlay } from './SelectionOverlay';
 import { ZoomIndicator } from './ZoomIndicator';
 import { exportToCanvas } from './exportToCanvas';
@@ -195,6 +196,13 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
         {state.layers.map((layer) =>
           layer.elementType === 'divider' ? (
             <DividerElement
+              key={layer.id}
+              layer={layer}
+              isSelected={layer.id === state.selectedLayerId}
+              onPointerDown={interaction.handleElementPointerDown}
+            />
+          ) : layer.elementType === 'image' ? (
+            <ImageElement
               key={layer.id}
               layer={layer}
               isSelected={layer.id === state.selectedLayerId}

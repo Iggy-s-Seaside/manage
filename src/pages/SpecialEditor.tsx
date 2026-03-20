@@ -48,6 +48,7 @@ export function SpecialEditor() {
   const navigate = useNavigate();
   const canvasRef = useRef<DomCanvasHandle>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
+  const imageLayerInputRef = useRef<HTMLInputElement>(null);
   const presetsButtonRef = useRef<HTMLButtonElement>(null);
 
   const { state, selectedLayer, canUndo, canRedo, dispatch, addTextLayer } = useEditorState();
@@ -261,6 +262,34 @@ export function SpecialEditor() {
       navigate('/specials');
     }
   };
+
+  // Add image layer from file
+  const handleAddImageLayer = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // Create an image to get natural dimensions
+      const img = new window.Image();
+      img.onload = () => {
+        const maxWidth = Math.min(img.naturalWidth, state.canvasWidth * 0.8);
+        const ratio = img.naturalHeight / img.naturalWidth;
+        const layerWidth = Math.round(maxWidth);
+        const layerHeight = Math.round(maxWidth * ratio);
+        addTextLayer({
+          elementType: 'image',
+          text: file.name, // Store filename as label
+          imageSrc: dataUrl,
+          imageHeight: layerHeight,
+          width: layerWidth,
+          fontSize: 16, // Unused for image but required by type
+          x: Math.round((state.canvasWidth - layerWidth) / 2),
+          y: Math.round((state.canvasHeight - layerHeight) / 2),
+        });
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  }, [state.canvasWidth, state.canvasHeight, addTextLayer]);
 
   const handleDuplicate = useCallback((layer: TextLayer) => {
     const { id: _id, ...rest } = layer;
@@ -519,6 +548,11 @@ export function SpecialEditor() {
           {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} Upload
         </button>
         <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
+        <input ref={imageLayerInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleAddImageLayer(file);
+          if (imageLayerInputRef.current) imageLayerInputRef.current.value = '';
+        }} />
 
         <div className="w-px h-6 bg-border" />
 
@@ -790,6 +824,7 @@ export function SpecialEditor() {
           // Auto-open properties on mobile so user can immediately edit text/font
           setMobileSheet('properties');
         }}
+        onAddImage={() => imageLayerInputRef.current?.click()}
         onOpenLibrary={() => setLibraryOpen(true)}
         onUpload={() => bgInputRef.current?.click()}
         onOpenLayers={() => setMobileSheet('layers')}
@@ -835,7 +870,7 @@ export function SpecialEditor() {
       <BottomSheet
         open={mobileSheet === 'properties'}
         onClose={() => setMobileSheet(null)}
-        title={selectedLayer?.elementType === 'divider' ? 'Divider Properties' : 'Text Properties'}
+        title={selectedLayer?.elementType === 'divider' ? 'Divider Properties' : selectedLayer?.elementType === 'image' ? 'Image Properties' : 'Text Properties'}
       >
         {selectedLayer ? (
           <PropertyPanel

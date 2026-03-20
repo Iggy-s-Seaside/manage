@@ -28,11 +28,14 @@ interface UseElementInteractionOptions {
 type DragState =
   | { type: 'pending'; id: string; startX: number; startY: number; startTime: number }
   | { type: 'move'; id: string; offsetX: number; offsetY: number; currentX: number; currentY: number }
-  | { type: 'resize'; id: string; handle: string; startX: number; startY: number; startWidth: number; startHeight: number; startFontSize: number; startLayerX: number; startLayerY: number; currentWidth: number; currentFontSize: number; currentLayerX: number; currentLayerY: number }
+  | { type: 'resize'; id: string; handle: string; startX: number; startY: number; startWidth: number; startHeight: number; startFontSize: number; startImageHeight: number; isImage: boolean; startLayerX: number; startLayerY: number; currentWidth: number; currentFontSize: number; currentImageHeight: number; currentLayerX: number; currentLayerY: number }
   | { type: 'rotate'; id: string; centerX: number; centerY: number; startAngle: number; currentRotation: number }
   | null;
 
 function estimateHeight(layer: TextLayer): number {
+  if (layer.elementType === 'image') {
+    return layer.imageHeight || layer.width; // Images have explicit height
+  }
   const lines = layer.text.split('\n');
   const lineHeight = layer.fontSize * 1.3;
   return lines.length > 1 ? (lines.length - 1) * lineHeight + layer.fontSize : layer.fontSize;
@@ -268,6 +271,7 @@ export function useElementInteraction({
 
         let newWidth = Math.max(50, Math.round(drag.startWidth * scale));
         const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
+        const newImageHeight = Math.max(30, Math.round(drag.startImageHeight * scale));
 
         // Clamp to canvas bounds
         newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
@@ -282,26 +286,31 @@ export function useElementInteraction({
         }
         // For top handles, adjust Y based on height change
         if (!isBottom) {
-          const newHeight = estimateHeight({ ...layer, fontSize: newFontSize });
+          const newHeight = drag.isImage ? newImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
           newY = Math.round(drag.startLayerY + (drag.startHeight - newHeight));
         }
 
         newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
 
-        // Direct DOM update for width + position + fontSize
+        // Direct DOM update for width + position + fontSize/height
         const el = findLayerElement(contentRef, drag.id);
         if (el) {
           el.style.width = `${newWidth}px`;
-          el.style.fontSize = `${newFontSize}px`;
+          if (drag.isImage) {
+            el.style.height = `${newImageHeight}px`;
+          } else {
+            el.style.fontSize = `${newFontSize}px`;
+          }
           applyPositionToDOM(el, newX, newY, layer.rotation || undefined);
         }
 
         // Sync selection overlay during resize
-        const newHeight = estimateHeight({ ...layer, fontSize: newFontSize });
+        const newHeight = drag.isImage ? newImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
         syncSelectionOverlay(contentRef, newX, newY, newWidth, newHeight, layer.rotation || 0);
 
         drag.currentWidth = newWidth;
         drag.currentFontSize = newFontSize;
+        drag.currentImageHeight = newImageHeight;
         drag.currentLayerX = newX;
         drag.currentLayerY = newY;
       }
@@ -343,7 +352,9 @@ export function useElementInteraction({
       if (drag?.type === 'move') {
         onUpdateLayer(drag.id, { x: drag.currentX, y: drag.currentY });
       } else if (drag?.type === 'resize') {
-        onUpdateLayer(drag.id, { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX, y: drag.currentLayerY });
+        const changes: Partial<TextLayer> = { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX, y: drag.currentLayerY };
+        if (drag.isImage) changes.imageHeight = drag.currentImageHeight;
+        onUpdateLayer(drag.id, changes);
       } else if (drag?.type === 'rotate') {
         onUpdateLayer(drag.id, { rotation: drag.currentRotation });
       }
@@ -387,6 +398,7 @@ export function useElementInteraction({
       };
     } else {
       const startHeight = estimateHeight(layer);
+      const isImage = layer.elementType === 'image';
       dragRef.current = {
         type: 'resize',
         id: layer.id,
@@ -396,10 +408,13 @@ export function useElementInteraction({
         startWidth: layer.width,
         startHeight,
         startFontSize: layer.fontSize,
+        startImageHeight: layer.imageHeight || layer.width,
+        isImage,
         startLayerX: layer.x,
         startLayerY: layer.y,
         currentWidth: layer.width,
         currentFontSize: layer.fontSize,
+        currentImageHeight: layer.imageHeight || layer.width,
         currentLayerX: layer.x,
         currentLayerY: layer.y,
       };
@@ -429,6 +444,7 @@ export function useElementInteraction({
 
         let newWidth = Math.max(50, Math.round(drag.startWidth * scale));
         const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
+        const newImageHeight = Math.max(30, Math.round(drag.startImageHeight * scale));
 
         newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
 
@@ -440,7 +456,7 @@ export function useElementInteraction({
           newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
         }
         if (!isBottom) {
-          const newHeight = estimateHeight({ ...layer, fontSize: newFontSize });
+          const newHeight = drag.isImage ? newImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
           newY = Math.round(drag.startLayerY + (drag.startHeight - newHeight));
         }
 
@@ -449,16 +465,21 @@ export function useElementInteraction({
         const el = findLayerElement(contentRef, drag.id);
         if (el) {
           el.style.width = `${newWidth}px`;
-          el.style.fontSize = `${newFontSize}px`;
+          if (drag.isImage) {
+            el.style.height = `${newImageHeight}px`;
+          } else {
+            el.style.fontSize = `${newFontSize}px`;
+          }
           applyPositionToDOM(el, newX, newY, layer.rotation || undefined);
         }
 
         // Sync selection overlay during resize
-        const newHeight = estimateHeight({ ...layer, fontSize: newFontSize });
+        const newHeight = drag.isImage ? newImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
         syncSelectionOverlay(contentRef, newX, newY, newWidth, newHeight, layer.rotation || 0);
 
         drag.currentWidth = newWidth;
         drag.currentFontSize = newFontSize;
+        drag.currentImageHeight = newImageHeight;
         drag.currentLayerX = newX;
         drag.currentLayerY = newY;
       }
@@ -495,7 +516,9 @@ export function useElementInteraction({
 
       // Commit to React state
       if (drag?.type === 'resize') {
-        onUpdateLayer(drag.id, { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX, y: drag.currentLayerY });
+        const changes: Partial<TextLayer> = { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX, y: drag.currentLayerY };
+        if (drag.isImage) changes.imageHeight = drag.currentImageHeight;
+        onUpdateLayer(drag.id, changes);
       } else if (drag?.type === 'rotate') {
         onUpdateLayer(drag.id, { rotation: drag.currentRotation });
       }
