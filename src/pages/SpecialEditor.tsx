@@ -14,6 +14,7 @@ import { ImageLibrary } from '../components/editor/ImageLibrary';
 import { ImageAdjustments } from '../components/editor/ImageAdjustments';
 import { MobileToolbar } from '../components/editor/MobileToolbar';
 import { MobileFilterBar } from '../components/editor/MobileFilterBar';
+import { MobileFontPicker } from '../components/editor/MobileFontPicker';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { Modal, ConfirmDialog } from '../components/ui/Modal';
 import { useEditorState } from '../hooks/useEditorState';
@@ -71,6 +72,7 @@ export function SpecialEditor() {
   const [currentScale, setCurrentScale] = useState(1);
   const [isGesturing, setIsGesturing] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileFontPickerOpen, setMobileFontPickerOpen] = useState(false);
   const [customSizeOpen, setCustomSizeOpen] = useState(false);
   const [customWidth, setCustomWidth] = useState(1080);
   const [customHeight, setCustomHeight] = useState(1080);
@@ -790,6 +792,7 @@ export function SpecialEditor() {
         onUpload={() => bgInputRef.current?.click()}
         onOpenLayers={() => setMobileSheet('layers')}
         onOpenProperties={() => setMobileSheet('properties')}
+        onOpenFontPicker={() => { setMobileFontPickerOpen(true); setMobileSheet(null); }}
         onOpenAdjustments={() => { setMobileFiltersOpen(true); setMobileSheet(null); }}
         onOpenTemplates={() => setMobileSheet('templates')}
         onUndo={() => dispatch({ type: 'UNDO' })}
@@ -854,6 +857,15 @@ export function SpecialEditor() {
           onUpdate={(filters) => dispatch({ type: 'SET_IMAGE_FILTERS', filters })}
           onReset={() => dispatch({ type: 'RESET_IMAGE_FILTERS' })}
           onClose={() => setMobileFiltersOpen(false)}
+        />
+      )}
+
+      {/* Mobile floating font picker — overlays canvas for real-time preview */}
+      {mobileFontPickerOpen && selectedLayer && (
+        <MobileFontPicker
+          currentFont={selectedLayer.fontFamily}
+          onSelect={(font) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, changes: { fontFamily: font } })}
+          onClose={() => setMobileFontPickerOpen(false)}
         />
       )}
 

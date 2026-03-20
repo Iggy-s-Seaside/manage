@@ -28,7 +28,7 @@ interface UseElementInteractionOptions {
 type DragState =
   | { type: 'pending'; id: string; startX: number; startY: number; startTime: number }
   | { type: 'move'; id: string; offsetX: number; offsetY: number; currentX: number; currentY: number }
-  | { type: 'resize'; id: string; handle: string; startX: number; startY: number; startWidth: number; startFontSize: number; startLayerX: number; currentWidth: number; currentFontSize: number; currentLayerX: number }
+  | { type: 'resize'; id: string; handle: string; startX: number; startY: number; startWidth: number; startHeight: number; startFontSize: number; startLayerX: number; startLayerY: number; currentWidth: number; currentFontSize: number; currentLayerX: number; currentLayerY: number }
   | { type: 'rotate'; id: string; centerX: number; centerY: number; startAngle: number; currentRotation: number }
   | null;
 
@@ -47,6 +47,19 @@ function findLayerElement(contentRef: React.RefObject<HTMLDivElement | null>, la
 /** Apply transform directly to DOM element — zero re-renders */
 function applyPositionToDOM(el: HTMLElement, x: number, y: number, rotation?: number) {
   el.style.transform = `translate(${x}px, ${y}px)${rotation ? ` rotate(${rotation}deg)` : ''}`;
+}
+
+/** Move the selection overlay to match a layer's current visual position */
+function syncSelectionOverlay(contentRef: React.RefObject<HTMLDivElement | null>, x: number, y: number, width: number, height: number, rotation: number) {
+  if (!contentRef.current) return;
+  const overlay = contentRef.current.querySelector('[data-selection-overlay]') as HTMLElement | null;
+  if (!overlay) return;
+  const padding = 4;
+  const boxW = width + padding * 2;
+  const boxH = height + padding * 2;
+  overlay.style.width = `${boxW}px`;
+  overlay.style.height = `${boxH}px`;
+  overlay.style.transform = `translate(${x - padding}px, ${y - padding}px)${rotation !== 0 ? ` rotate(${rotation}deg)` : ''}`;
 }
 
 export function useElementInteraction({
@@ -227,6 +240,10 @@ export function useElementInteraction({
           applyPositionToDOM(el, finalX, finalY, layer.rotation || undefined);
         }
 
+        // Keep selection overlay in sync during drag
+        const h = estimateHeight(layer);
+        syncSelectionOverlay(contentRef, finalX, finalY, layer.width, h, layer.rotation || 0);
+
         // Store current position for commit on pointerup
         drag.currentX = finalX;
         drag.currentY = finalY;
@@ -234,35 +251,59 @@ export function useElementInteraction({
 
       if (drag.type === 'resize') {
         const deltaX = cx - drag.startX;
-        let newWidth: number;
-        let newX: number;
-        if (drag.handle === 'ne' || drag.handle === 'se') {
-          newWidth = Math.max(50, Math.round(drag.startWidth + deltaX));
-          newX = drag.startLayerX;
-        } else {
-          newWidth = Math.max(50, Math.round(drag.startWidth - deltaX));
-          newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
-        }
+        const deltaY = cy - drag.startY;
+
+        // Proportional resize using diagonal distance
+        // Project the mouse delta onto the diagonal from center to the handle corner
+        const isRight = drag.handle === 'ne' || drag.handle === 'se';
+        const isBottom = drag.handle === 'se' || drag.handle === 'sw';
+        const dirX = isRight ? 1 : -1;
+        const dirY = isBottom ? 1 : -1;
+        // Normalize diagonal direction
+        const diagLen = Math.sqrt(drag.startWidth * drag.startWidth + drag.startHeight * drag.startHeight);
+        const normX = (drag.startWidth * dirX) / diagLen;
+        const normY = (drag.startHeight * dirY) / diagLen;
+        const projection = deltaX * normX + deltaY * normY;
+        const scale = Math.max(0.1, (diagLen + projection * dirX) / diagLen);
+
+        let newWidth = Math.max(50, Math.round(drag.startWidth * scale));
+        const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
 
         // Clamp to canvas bounds
         newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
-        newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
 
-        // Scale fontSize proportionally with width
-        const scale = newWidth / drag.startWidth;
-        const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
+        // Adjust position for left-side handles
+        let newX: number;
+        let newY = drag.startLayerY;
+        if (isRight) {
+          newX = drag.startLayerX;
+        } else {
+          newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
+        }
+        // For top handles, adjust Y based on height change
+        if (!isBottom) {
+          const newHeight = estimateHeight({ ...layer, fontSize: newFontSize });
+          newY = Math.round(drag.startLayerY + (drag.startHeight - newHeight));
+        }
+
+        newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
 
         // Direct DOM update for width + position + fontSize
         const el = findLayerElement(contentRef, drag.id);
         if (el) {
           el.style.width = `${newWidth}px`;
           el.style.fontSize = `${newFontSize}px`;
-          applyPositionToDOM(el, newX, layer.y, layer.rotation || undefined);
+          applyPositionToDOM(el, newX, newY, layer.rotation || undefined);
         }
+
+        // Sync selection overlay during resize
+        const newHeight = estimateHeight({ ...layer, fontSize: newFontSize });
+        syncSelectionOverlay(contentRef, newX, newY, newWidth, newHeight, layer.rotation || 0);
 
         drag.currentWidth = newWidth;
         drag.currentFontSize = newFontSize;
         drag.currentLayerX = newX;
+        drag.currentLayerY = newY;
       }
 
       if (drag.type === 'rotate') {
@@ -287,6 +328,10 @@ export function useElementInteraction({
           applyPositionToDOM(el, layer.x, layer.y, finalAngle);
         }
 
+        // Sync selection overlay rotation
+        const h = estimateHeight(layer);
+        syncSelectionOverlay(contentRef, layer.x, layer.y, layer.width, h, finalAngle);
+
         drag.currentRotation = finalAngle;
       }
     };
@@ -298,7 +343,7 @@ export function useElementInteraction({
       if (drag?.type === 'move') {
         onUpdateLayer(drag.id, { x: drag.currentX, y: drag.currentY });
       } else if (drag?.type === 'resize') {
-        onUpdateLayer(drag.id, { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX });
+        onUpdateLayer(drag.id, { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX, y: drag.currentLayerY });
       } else if (drag?.type === 'rotate') {
         onUpdateLayer(drag.id, { rotation: drag.currentRotation });
       }
@@ -314,7 +359,7 @@ export function useElementInteraction({
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
-  }, [layers, selectedLayerId, clientToCanvas, contentRef, onSelectLayer, onUpdateLayer, onLayerTapped, onEnterEditMode, calcSnapLines, updateSnapLinesDOM]);
+  }, [layers, selectedLayerId, clientToCanvas, contentRef, onSelectLayer, onUpdateLayer, onLayerTapped, onEnterEditMode, calcSnapLines, updateSnapLinesDOM, canvasWidth, canvasHeight]);
 
   // Handle pointer down on a selection handle
   const handleHandlePointerDown = useCallback((e: React.PointerEvent, handle: string) => {
@@ -341,6 +386,7 @@ export function useElementInteraction({
         currentRotation: layer.rotation,
       };
     } else {
+      const startHeight = estimateHeight(layer);
       dragRef.current = {
         type: 'resize',
         id: layer.id,
@@ -348,11 +394,14 @@ export function useElementInteraction({
         startX: x,
         startY: y,
         startWidth: layer.width,
+        startHeight,
         startFontSize: layer.fontSize,
         startLayerX: layer.x,
+        startLayerY: layer.y,
         currentWidth: layer.width,
         currentFontSize: layer.fontSize,
         currentLayerX: layer.x,
+        currentLayerY: layer.y,
       };
     }
 
@@ -365,34 +414,53 @@ export function useElementInteraction({
 
       if (drag.type === 'resize') {
         const deltaX = cx - drag.startX;
-        let newWidth: number;
+        const deltaY = cy - drag.startY;
+
+        // Proportional resize using diagonal distance
+        const isRight = drag.handle === 'ne' || drag.handle === 'se';
+        const isBottom = drag.handle === 'se' || drag.handle === 'sw';
+        const dirX = isRight ? 1 : -1;
+        const dirY = isBottom ? 1 : -1;
+        const diagLen = Math.sqrt(drag.startWidth * drag.startWidth + drag.startHeight * drag.startHeight);
+        const normX = (drag.startWidth * dirX) / diagLen;
+        const normY = (drag.startHeight * dirY) / diagLen;
+        const projection = deltaX * normX + deltaY * normY;
+        const scale = Math.max(0.1, (diagLen + projection * dirX) / diagLen);
+
+        let newWidth = Math.max(50, Math.round(drag.startWidth * scale));
+        const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
+
+        newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
+
         let newX: number;
-        if (drag.handle === 'ne' || drag.handle === 'se') {
-          newWidth = Math.max(50, Math.round(drag.startWidth + deltaX));
+        let newY = drag.startLayerY;
+        if (isRight) {
           newX = drag.startLayerX;
         } else {
-          newWidth = Math.max(50, Math.round(drag.startWidth - deltaX));
           newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
         }
+        if (!isBottom) {
+          const newHeight = estimateHeight({ ...layer, fontSize: newFontSize });
+          newY = Math.round(drag.startLayerY + (drag.startHeight - newHeight));
+        }
 
-        // Clamp to canvas bounds
-        newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
         newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
-
-        // Scale fontSize proportionally with width
-        const scale = newWidth / drag.startWidth;
-        const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
 
         const el = findLayerElement(contentRef, drag.id);
         if (el) {
           el.style.width = `${newWidth}px`;
           el.style.fontSize = `${newFontSize}px`;
-          applyPositionToDOM(el, newX, layer.y, layer.rotation || undefined);
+          applyPositionToDOM(el, newX, newY, layer.rotation || undefined);
         }
+
+        // Sync selection overlay during resize
+        const newHeight = estimateHeight({ ...layer, fontSize: newFontSize });
+        syncSelectionOverlay(contentRef, newX, newY, newWidth, newHeight, layer.rotation || 0);
 
         drag.currentWidth = newWidth;
         drag.currentFontSize = newFontSize;
         drag.currentLayerX = newX;
+        drag.currentLayerY = newY;
       }
 
       if (drag.type === 'rotate') {
@@ -414,6 +482,10 @@ export function useElementInteraction({
           applyPositionToDOM(el, layer.x, layer.y, finalAngle);
         }
 
+        // Sync selection overlay rotation
+        const h = estimateHeight(layer);
+        syncSelectionOverlay(contentRef, layer.x, layer.y, layer.width, h, finalAngle);
+
         drag.currentRotation = finalAngle;
       }
     };
@@ -423,7 +495,7 @@ export function useElementInteraction({
 
       // Commit to React state
       if (drag?.type === 'resize') {
-        onUpdateLayer(drag.id, { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX });
+        onUpdateLayer(drag.id, { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX, y: drag.currentLayerY });
       } else if (drag?.type === 'rotate') {
         onUpdateLayer(drag.id, { rotation: drag.currentRotation });
       }

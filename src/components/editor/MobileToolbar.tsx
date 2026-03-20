@@ -2,7 +2,7 @@ import { useState, memo } from 'react';
 import {
   Plus, Image, Upload, Layers, SlidersHorizontal,
   Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate,
-  Square, RectangleVertical, RectangleHorizontal
+  Square, RectangleVertical, RectangleHorizontal, Type as TypeIcon
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
@@ -22,6 +22,7 @@ interface MobileToolbarProps {
   onUpload: () => void;
   onOpenLayers: () => void;
   onOpenProperties: () => void;
+  onOpenFontPicker: () => void;
   onOpenAdjustments: () => void;
   onOpenTemplates: () => void;
   onUndo: () => void;
@@ -47,6 +48,7 @@ export const MobileToolbar = memo(function MobileToolbar({
   onUpload,
   onOpenLayers,
   onOpenProperties,
+  onOpenFontPicker,
   onOpenAdjustments,
   onOpenTemplates,
   onUndo,
@@ -166,6 +168,13 @@ export const MobileToolbar = memo(function MobileToolbar({
       <div className="flex items-center justify-around px-2 py-1.5 bg-surface/95 backdrop-blur-xl border-t border-border/30">
         <ToolButton icon={Plus} label="Add" onClick={() => setAddMenuOpen(!addMenuOpen)} active={addMenuOpen} />
         <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
+        {hasSelection && (
+          <ToolButton
+            icon={TypeIcon}
+            label="Font"
+            onClick={onOpenFontPicker}
+          />
+        )}
         <ToolButton
           icon={SlidersHorizontal}
           label="Edit"

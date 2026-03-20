@@ -71,6 +71,7 @@ export const SelectionOverlay = memo<SelectionOverlayProps>(({
     <>
       {/* Selection ring + handles (rotated with the layer) */}
       <div
+        data-selection-overlay
         className="absolute pointer-events-none"
         style={{
           left: 0,
