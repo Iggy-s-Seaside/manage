@@ -79,7 +79,7 @@ export const MobileToolbar = memo(function MobileToolbar({
       {addMenuOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAddMenuOpen(false)} />
-          <div className="absolute bottom-full left-3 mb-2 z-50 bg-surface border border-border rounded-xl shadow-modal p-2 animate-fade-in">
+          <div className="absolute bottom-full left-3 mb-2 z-50 bg-surface/95 backdrop-blur-md border border-border/50 rounded-xl shadow-modal p-2 animate-fade-in">
             <button
               onClick={() => { onAddText(); setAddMenuOpen(false); }}
               className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
