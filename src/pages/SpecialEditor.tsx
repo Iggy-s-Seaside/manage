@@ -76,6 +76,15 @@ export function SpecialEditor() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [mobileFontPickerOpen, setMobileFontPickerOpen] = useState(false);
   const [mobileBlendPickerOpen, setMobileBlendPickerOpen] = useState(false);
+
+  // Close all floating overlays and bottom sheets — ensures only one is open at a time
+  const closeAllOverlays = useCallback(() => {
+    setMobileSheet(null);
+    setMobileFontPickerOpen(false);
+    setMobileBlendPickerOpen(false);
+    setMobileFiltersOpen(false);
+  }, []);
+
   const [customSizeOpen, setCustomSizeOpen] = useState(false);
   const [customWidth, setCustomWidth] = useState(1080);
   const [customHeight, setCustomHeight] = useState(1080);
@@ -822,19 +831,20 @@ export function SpecialEditor() {
       {/* Mobile Toolbar — fixed at bottom */}
       <MobileToolbar
         onAddText={(overrides) => {
+          closeAllOverlays();
           addTextLayer(overrides);
-          // Auto-open properties on mobile so user can immediately edit text/font
           setMobileSheet('properties');
         }}
-        onAddImage={() => imageLayerInputRef.current?.click()}
-        onOpenLibrary={() => setLibraryOpen(true)}
-        onUpload={() => bgInputRef.current?.click()}
-        onOpenLayers={() => setMobileSheet('layers')}
-        onOpenProperties={() => setMobileSheet('properties')}
-        onOpenFontPicker={() => { setMobileFontPickerOpen(true); setMobileBlendPickerOpen(false); setMobileSheet(null); }}
-        onOpenBlendPicker={() => { setMobileBlendPickerOpen(true); setMobileFontPickerOpen(false); setMobileSheet(null); }}
-        onOpenAdjustments={() => { setMobileFiltersOpen(true); setMobileSheet(null); }}
-        onOpenTemplates={() => setMobileSheet('templates')}
+        onAddImage={() => { closeAllOverlays(); imageLayerInputRef.current?.click(); }}
+        onOpenLibrary={() => { closeAllOverlays(); setLibraryOpen(true); }}
+        onUpload={() => { closeAllOverlays(); bgInputRef.current?.click(); }}
+        onOpenLayers={() => { closeAllOverlays(); setMobileSheet('layers'); }}
+        onOpenProperties={() => { closeAllOverlays(); setMobileSheet('properties'); }}
+        onOpenFontPicker={() => { closeAllOverlays(); setMobileFontPickerOpen(true); }}
+        onOpenBlendPicker={() => { closeAllOverlays(); setMobileBlendPickerOpen(true); }}
+        onCloseOverlays={closeAllOverlays}
+        onOpenAdjustments={() => { closeAllOverlays(); setMobileFiltersOpen(true); }}
+        onOpenTemplates={() => { closeAllOverlays(); setMobileSheet('templates'); }}
         onUndo={() => dispatch({ type: 'UNDO' })}
         onRedo={() => dispatch({ type: 'REDO' })}
         onSave={() => setSaveModalOpen(true)}

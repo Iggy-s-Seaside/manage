@@ -25,6 +25,7 @@ interface MobileToolbarProps {
   onOpenProperties: () => void;
   onOpenFontPicker: () => void;
   onOpenBlendPicker: () => void;
+  onCloseOverlays: () => void;
   onOpenAdjustments: () => void;
   onOpenTemplates: () => void;
   onUndo: () => void;
@@ -54,6 +55,7 @@ export const MobileToolbar = memo(function MobileToolbar({
   onOpenProperties,
   onOpenFontPicker,
   onOpenBlendPicker,
+  onCloseOverlays,
   onOpenAdjustments,
   onOpenTemplates,
   onUndo,
@@ -179,7 +181,7 @@ export const MobileToolbar = memo(function MobileToolbar({
 
       {/* Main toolbar — single row, anchored to bottom */}
       <div className="flex items-center justify-around px-2 py-1.5 bg-surface/95 backdrop-blur-xl border-t border-border/30">
-        <ToolButton icon={Plus} label="Add" onClick={() => setAddMenuOpen(!addMenuOpen)} active={addMenuOpen} />
+        <ToolButton icon={Plus} label="Add" onClick={() => { if (!addMenuOpen) onCloseOverlays(); setAddMenuOpen(!addMenuOpen); setMoreOpen(false); }} active={addMenuOpen} />
         <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
         {hasSelection && !isImageSelected && (
           <ToolButton
@@ -203,7 +205,7 @@ export const MobileToolbar = memo(function MobileToolbar({
           highlighted={activeSheet === 'properties'}
         />
         <ToolButton icon={Save} label="Save" onClick={onSave} primary />
-        <ToolButton icon={MoreHorizontal} label="More" onClick={() => setMoreOpen(!moreOpen)} active={moreOpen} />
+        <ToolButton icon={MoreHorizontal} label="More" onClick={() => { if (!moreOpen) onCloseOverlays(); setMoreOpen(!moreOpen); setAddMenuOpen(false); }} active={moreOpen} />
       </div>
 
       {/* Inline keyframes for popover animation */}

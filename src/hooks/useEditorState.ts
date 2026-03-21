@@ -163,9 +163,17 @@ export function useEditorState() {
   const selectedLayer = state.layers.find((l) => l.id === state.selectedLayerId) ?? null;
 
   const addTextLayer = useCallback((overrides?: Partial<TextLayer>) => {
-    // Calculate base position, then offset if there's already a layer near that spot
-    let baseX = state.canvasWidth / 2 - 150;
-    let baseY = state.canvasHeight / 2 - 30;
+    // Determine final width/height first so we can center properly
+    const finalWidth = overrides?.width ?? 300;
+    const finalHeight = overrides?.imageHeight ?? 60;
+
+    // Calculate centered position based on actual element size
+    let baseX = Math.round((state.canvasWidth - finalWidth) / 2);
+    let baseY = Math.round((state.canvasHeight - finalHeight) / 2);
+
+    // Use explicit position from overrides if provided (e.g., image layers)
+    if (overrides?.x !== undefined) baseX = overrides.x;
+    if (overrides?.y !== undefined) baseY = overrides.y;
 
     // Check if any existing layer is near this position and offset to avoid stacking
     const OVERLAP_THRESHOLD = 30;
@@ -181,14 +189,12 @@ export function useEditorState() {
     }
 
     // Clamp within canvas bounds
-    baseX = Math.max(0, Math.min(baseX, state.canvasWidth - 300));
-    baseY = Math.max(0, Math.min(baseY, state.canvasHeight - 60));
+    baseX = Math.max(0, Math.min(baseX, state.canvasWidth - finalWidth));
+    baseY = Math.max(0, Math.min(baseY, state.canvasHeight - finalHeight));
 
     const layer: TextLayer = {
       id: crypto.randomUUID(),
       text: 'New Text',
-      x: baseX,
-      y: baseY,
       width: 300,
       fontFamily: 'Inter',
       fontSize: 48,
@@ -211,6 +217,9 @@ export function useEditorState() {
       locked: false,
       visible: true,
       ...overrides,
+      // Position always uses our calculated centered/clamped values
+      x: baseX,
+      y: baseY,
     };
     dispatch({ type: 'ADD_LAYER', layer });
   }, [state.canvasWidth, state.canvasHeight, state.layers]);
