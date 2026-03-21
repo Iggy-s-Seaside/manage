@@ -197,6 +197,7 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
               layer={layer}
               isSelected={layer.id === state.selectedLayerId}
               onPointerDown={interaction.handleElementPointerDown}
+              zoom={zoom}
             />
           ) : layer.elementType === 'image' ? (
             <ImageElement
@@ -204,6 +205,7 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
               layer={layer}
               isSelected={layer.id === state.selectedLayerId}
               onPointerDown={interaction.handleElementPointerDown}
+              zoom={zoom}
             />
           ) : (
             <TextElement
@@ -214,6 +216,7 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
               onPointerDown={interaction.handleElementPointerDown}
               onTextCommit={handleTextCommit}
               onEditEnd={handleEditEnd}
+              zoom={zoom}
             />
           )
         )}

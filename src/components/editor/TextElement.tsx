@@ -1,6 +1,9 @@
 import { memo, useRef, useCallback, useEffect } from 'react';
 import type { TextLayer } from '../../types';
 
+/** Minimum touch target size in screen pixels (Apple HIG) */
+const MIN_TOUCH_TARGET = 44;
+
 interface TextElementProps {
   layer: TextLayer;
   isSelected: boolean;
@@ -8,6 +11,7 @@ interface TextElementProps {
   onPointerDown?: (e: React.PointerEvent, layerId: string) => void;
   onTextCommit?: (layerId: string, text: string) => void;
   onEditEnd?: () => void;
+  zoom?: number;
 }
 
 export const TextElement = memo<TextElementProps>(({
@@ -17,6 +21,7 @@ export const TextElement = memo<TextElementProps>(({
   onPointerDown,
   onTextCommit,
   onEditEnd,
+  zoom = 1,
 }) => {
   const elRef = useRef<HTMLDivElement>(null);
   const originalTextRef = useRef(layer.text);
@@ -119,6 +124,9 @@ export const TextElement = memo<TextElementProps>(({
         lineHeight: layer.lineHeight || 1.3,
         // Ensure minimum 44px touch target for small text
         minHeight: !isEditing ? 44 : undefined,
+        // Center text vertically within the 44px touch target (only when not editing)
+        display: !isEditing ? 'flex' : 'block',
+        alignItems: !isEditing ? 'center' : undefined,
         cursor: layer.locked ? 'not-allowed' : (isEditing ? 'text' : 'move'),
         pointerEvents: 'auto',
         // Edit mode styling
@@ -133,6 +141,22 @@ export const TextElement = memo<TextElementProps>(({
         willChange: isSelected ? 'transform' : 'auto',
       }}
     >
+      {/* Invisible touch target expander — ensures at least 44px screen-space tap area when canvas is zoomed out */}
+      {zoom < 1 && !isEditing && (() => {
+        const expandY = Math.max(0, (MIN_TOUCH_TARGET / zoom - MIN_TOUCH_TARGET) / 2);
+        return expandY > 0 ? (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: -expandY,
+              bottom: -expandY,
+            }}
+          />
+        ) : null;
+      })()}
       {/* Only render as React child when NOT editing — during edit, DOM owns the text */}
       {!isEditing ? layer.text : null}
     </div>

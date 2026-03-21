@@ -16,6 +16,8 @@ interface SelectionOverlayProps {
   onHandlePointerDown: (e: React.PointerEvent, handle: string) => void;
 }
 
+const MIN_TOUCH_HEIGHT = 44;
+
 /** Estimate element height based on type */
 function estimateHeight(layer: TextLayer): number {
   if (layer.elementType === 'image') {
@@ -24,7 +26,9 @@ function estimateHeight(layer: TextLayer): number {
   const lines = layer.text.split('\n');
   const lh = layer.lineHeight || 1.3;
   const lineHeight = layer.fontSize * lh;
-  return lines.length > 1 ? (lines.length - 1) * lineHeight + layer.fontSize : layer.fontSize;
+  const rawHeight = lines.length > 1 ? (lines.length - 1) * lineHeight + layer.fontSize : layer.fontSize;
+  // Match the 44px minHeight applied to TextElement so the selection box aligns
+  return Math.max(rawHeight, MIN_TOUCH_HEIGHT);
 }
 
 const HANDLE_SIZE = 10;

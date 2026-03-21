@@ -176,15 +176,15 @@ export function useEditorState() {
     if (overrides?.y !== undefined) baseY = overrides.y;
 
     // Check if any existing layer is near this position and offset to avoid stacking
-    const OVERLAP_THRESHOLD = 30;
+    const OVERLAP_THRESHOLD = 50;
     let attempts = 0;
     while (attempts < 10) {
       const overlapping = state.layers.some(l =>
         Math.abs(l.x - baseX) < OVERLAP_THRESHOLD && Math.abs(l.y - baseY) < OVERLAP_THRESHOLD
       );
       if (!overlapping) break;
-      baseX += 40;
-      baseY += 50;
+      baseX += 60;
+      baseY += 80;
       attempts++;
     }
 

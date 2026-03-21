@@ -1,16 +1,21 @@
 import { memo, useCallback } from 'react';
 import type { TextLayer } from '../../types';
 
+/** Minimum touch target size in screen pixels (Apple HIG) */
+const MIN_TOUCH_TARGET = 44;
+
 interface DividerElementProps {
   layer: TextLayer;
   isSelected: boolean;
   onPointerDown?: (e: React.PointerEvent, layerId: string) => void;
+  zoom?: number;
 }
 
 export const DividerElement = memo<DividerElementProps>(({
   layer,
   isSelected,
   onPointerDown,
+  zoom = 1,
 }) => {
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     onPointerDown?.(e, layer.id);
@@ -52,6 +57,22 @@ export const DividerElement = memo<DividerElementProps>(({
         willChange: isSelected ? 'transform' : 'auto',
       }}
     >
+      {/* Invisible touch target expander — ensures at least 44px screen-space tap area */}
+      {zoom < 1 && (() => {
+        const expandY = Math.max(0, (MIN_TOUCH_TARGET / zoom - MIN_TOUCH_TARGET) / 2);
+        return expandY > 0 ? (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: -expandY,
+              bottom: -expandY,
+            }}
+          />
+        ) : null;
+      })()}
       {/* Left line */}
       <div
         style={{

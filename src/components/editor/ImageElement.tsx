@@ -1,10 +1,14 @@
 import { memo, useCallback } from 'react';
 import type { TextLayer } from '../../types';
 
+/** Minimum touch target size in screen pixels (Apple HIG) */
+const MIN_TOUCH_TARGET = 44;
+
 interface ImageElementProps {
   layer: TextLayer;
   isSelected: boolean;
   onPointerDown?: (e: React.PointerEvent, layerId: string) => void;
+  zoom?: number;
 }
 
 /** Build CSS filter string from ImageFilters */
@@ -22,6 +26,7 @@ export const ImageElement = memo<ImageElementProps>(({
   layer,
   isSelected,
   onPointerDown,
+  zoom = 1,
 }) => {
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     onPointerDown?.(e, layer.id);
@@ -54,6 +59,22 @@ export const ImageElement = memo<ImageElementProps>(({
         mixBlendMode: (layer.blendMode || 'normal') as React.CSSProperties['mixBlendMode'],
       }}
     >
+      {/* Invisible touch target expander — ensures at least 44px screen-space tap area */}
+      {zoom < 1 && (() => {
+        const expandY = Math.max(0, (MIN_TOUCH_TARGET / zoom - height) / 2);
+        return expandY > 0 ? (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: -expandY,
+              bottom: -expandY,
+            }}
+          />
+        ) : null;
+      })()}
       {/* Image */}
       <img
         src={layer.imageSrc}
