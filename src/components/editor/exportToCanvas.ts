@@ -263,6 +263,26 @@ function drawImageLayerToCtx(ctx: CanvasRenderingContext2D, layer: TextLayer) {
   ctx.save();
   ctx.globalAlpha = layer.opacity;
 
+  // Blend mode mapping (CSS mix-blend-mode → Canvas globalCompositeOperation)
+  if (layer.blendMode && layer.blendMode !== 'normal') {
+    const blendMap: Record<string, GlobalCompositeOperation> = {
+      'screen': 'screen',
+      'multiply': 'multiply',
+      'overlay': 'overlay',
+      'soft-light': 'soft-light',
+      'hard-light': 'hard-light',
+      'difference': 'difference',
+      'exclusion': 'exclusion',
+      'color-dodge': 'color-dodge',
+      'color-burn': 'color-burn',
+      'luminosity': 'luminosity',
+      'darken': 'darken',
+      'lighten': 'lighten',
+    };
+    const op = blendMap[layer.blendMode];
+    if (op) ctx.globalCompositeOperation = op;
+  }
+
   const layerW = layer.width;
   const layerH = layer.imageHeight || layer.width;
   const centerX = layer.x + layerW / 2;

@@ -142,6 +142,7 @@ export interface TextLayer {
   imageHeight?: number;          // Explicit height (images have height, text doesn't)
   imageFilters?: ImageFilters;   // Per-layer image filters
   imageFit?: 'cover' | 'contain' | 'fill'; // How image fills its bounds
+  blendMode?: string; // CSS mix-blend-mode (screen, multiply, overlay, etc.)
 }
 
 export interface EditorState {

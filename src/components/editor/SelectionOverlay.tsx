@@ -17,8 +17,11 @@ interface SelectionOverlayProps {
   onHandlePointerDown: (e: React.PointerEvent, handle: string) => void;
 }
 
-/** Estimate text height based on line count and fontSize */
+/** Estimate element height based on type */
 function estimateHeight(layer: TextLayer): number {
+  if (layer.elementType === 'image') {
+    return layer.imageHeight || layer.width; // Images have explicit height
+  }
   const lines = layer.text.split('\n');
   const lh = layer.lineHeight || 1.3;
   const lineHeight = layer.fontSize * lh;

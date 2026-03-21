@@ -232,10 +232,11 @@ export function useElementInteraction({
           if ('vibrate' in navigator) navigator.vibrate([5, 5, 5]);
         }
 
-        // Clamp to canvas bounds
+        // Clamp to canvas bounds — keep at least 20% visible
         const height = estimateHeight(layer);
-        finalX = Math.max(0, Math.min(finalX, canvasWidth - layer.width));
-        finalY = Math.max(0, Math.min(finalY, canvasHeight - height));
+        const minVisible = 0.2;
+        finalX = Math.max(-layer.width * (1 - minVisible), Math.min(finalX, canvasWidth - layer.width * minVisible));
+        finalY = Math.max(-height * (1 - minVisible), Math.min(finalY, canvasHeight - height * minVisible));
 
         // Direct DOM update — no React re-render
         const el = findLayerElement(contentRef, drag.id);

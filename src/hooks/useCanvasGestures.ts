@@ -85,12 +85,12 @@ export function useCanvasGestures({
     const scaledW = canvasWidth * zoom;
     const scaledH = canvasHeight * zoom;
     const px = (vw - scaledW) / 2;
-    // On mobile, account for the fixed toolbar (60px) covering the bottom.
-    // Center the canvas in the visible area above the toolbar, with a small top margin.
+    // On mobile, position canvas near the top with just a small margin
+    // so it feels full-screen and doesn't get lost in dead space.
     const toolbarHeight = isMobile ? 60 : 0;
     const visibleH = vh - toolbarHeight;
     const py = isMobile
-      ? Math.max(8, (visibleH - scaledH) / 2)
+      ? Math.max(8, Math.min((visibleH - scaledH) / 3, 24))
       : (vh - scaledH) / 2;
     panXRef.current = px;
     panYRef.current = py;
@@ -200,8 +200,10 @@ export function useCanvasGestures({
       isPanningRef.current = false;
       setIsGesturing(true);
     } else if (pointersRef.current.length === 1) {
-      // Potential pan start (only if no element selected, or 2-finger)
-      if (!hasSelectedElement) {
+      // Single-finger pan disabled on mobile to prevent losing the canvas.
+      // On desktop (no touch), allow panning when nothing is selected.
+      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (!hasSelectedElement && !isMobile) {
         isPanningRef.current = true;
         lastPanPointRef.current = { x: e.clientX, y: e.clientY };
         velocityRef.current = { x: 0, y: 0 };
@@ -286,11 +288,29 @@ export function useCanvasGestures({
         applyTransform();
       }
 
+      // Clamp pan so canvas can't go fully off-screen
+      if (viewportRef.current) {
+        const vw = viewportRef.current.clientWidth;
+        const vh = viewportRef.current.clientHeight;
+        const scaledW = canvasWidth * zoomRef.current;
+        const scaledH = canvasHeight * zoomRef.current;
+        // Keep at least 25% of canvas visible in each direction
+        const margin = 0.25;
+        const minPanX = vw - scaledW * (1 - margin);
+        const maxPanX = scaledW * margin;
+        const minPanY = vh - scaledH * (1 - margin);
+        const maxPanY = scaledH * margin;
+        panXRef.current = Math.max(minPanX, Math.min(panXRef.current, maxPanX));
+        panYRef.current = Math.max(minPanY, Math.min(panYRef.current, maxPanY));
+        applyTransform();
+      }
+
       setIsGesturing(false);
       // Start momentum if panning (commits state when done)
       if (isPanningRef.current) {
         isPanningRef.current = false;
-        startMomentum();
+        // Skip momentum — commit immediately to prevent canvas drifting off
+        commitToState();
       } else {
         // No momentum — commit now
         commitToState();

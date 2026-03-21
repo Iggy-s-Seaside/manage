@@ -51,6 +51,7 @@ export const ImageElement = memo<ImageElementProps>(({
         willChange: isSelected ? 'transform' : 'auto',
         borderRadius: 4,
         overflow: 'hidden',
+        mixBlendMode: (layer.blendMode || 'normal') as React.CSSProperties['mixBlendMode'],
       }}
     >
       {/* Image */}
