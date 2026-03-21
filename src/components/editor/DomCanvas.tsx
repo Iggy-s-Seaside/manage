@@ -28,6 +28,7 @@ interface DomCanvasProps {
   onLayerTapped?: (layer: TextLayer) => void;
   onScaleChange?: (scale: number) => void;
   onGestureChange?: (active: boolean) => void;
+  onTripleTap?: (layerId: string) => void;
 }
 
 export interface DomCanvasHandle {
@@ -44,6 +45,7 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
   onLayerTapped,
   onScaleChange,
   onGestureChange,
+  onTripleTap,
 }, ref) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -110,6 +112,7 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
     onUpdateLayer,
     onLayerTapped,
     onEnterEditMode: handleDoubleClick,
+    onTripleTap,
   });
 
   // Expose imperative handle for export

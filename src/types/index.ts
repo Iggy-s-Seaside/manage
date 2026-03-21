@@ -142,6 +142,7 @@ export interface TextLayer {
   imageHeight?: number;          // Explicit height (images have height, text doesn't)
   imageFilters?: ImageFilters;   // Per-layer image filters
   imageFit?: 'cover' | 'contain' | 'fill'; // How image fills its bounds
+  imageCrop?: { top: number; right: number; bottom: number; left: number }; // CSS inset() percentages (0-100)
   blendMode?: string; // CSS mix-blend-mode (screen, multiply, overlay, etc.)
   // Video-specific fields (used when elementType === 'video')
   videoSrc?: string;             // URL, blob URL, or idb:// reference

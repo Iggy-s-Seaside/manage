@@ -100,6 +100,7 @@ export const VideoElement = memo<VideoElementProps>(({
         willChange: isSelected ? 'transform' : 'auto',
         borderRadius: 4,
         overflow: 'hidden',
+        clipPath: layer.imageCrop ? `inset(${layer.imageCrop.top}% ${layer.imageCrop.right}% ${layer.imageCrop.bottom}% ${layer.imageCrop.left}%)` : undefined,
         mixBlendMode: (layer.blendMode || 'normal') as React.CSSProperties['mixBlendMode'],
       }}
     >

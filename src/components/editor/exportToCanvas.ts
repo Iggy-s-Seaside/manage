@@ -294,6 +294,18 @@ function drawImageLayerToCtx(ctx: CanvasRenderingContext2D, layer: TextLayer) {
     ctx.translate(-centerX, -centerY);
   }
 
+  // Apply crop via canvas clipping (non-destructive inset percentages)
+  if (layer.imageCrop) {
+    const { top, right, bottom, left } = layer.imageCrop;
+    const clipX = layer.x + (left / 100) * layerW;
+    const clipY = layer.y + (top / 100) * layerH;
+    const clipW = layerW * (1 - (left + right) / 100);
+    const clipH = layerH * (1 - (top + bottom) / 100);
+    ctx.beginPath();
+    ctx.rect(clipX, clipY, clipW, clipH);
+    ctx.clip();
+  }
+
   // Apply per-layer image filters
   if (layer.imageFilters) {
     const filterStr = buildFilterString(layer.imageFilters);
@@ -379,6 +391,18 @@ function drawVideoLayerToCtx(
     ctx.translate(centerX, centerY);
     ctx.rotate((layer.rotation * Math.PI) / 180);
     ctx.translate(-centerX, -centerY);
+  }
+
+  // Apply crop via canvas clipping
+  if (layer.imageCrop) {
+    const { top, right, bottom, left } = layer.imageCrop;
+    const clipX = layer.x + (left / 100) * layerW;
+    const clipY = layer.y + (top / 100) * layerH;
+    const clipW = layerW * (1 - (left + right) / 100);
+    const clipH = layerH * (1 - (top + bottom) / 100);
+    ctx.beginPath();
+    ctx.rect(clipX, clipY, clipW, clipH);
+    ctx.clip();
   }
 
   // Per-layer filters

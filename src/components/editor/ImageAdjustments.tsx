@@ -1,4 +1,4 @@
-import { Sun, Contrast, Droplets, CloudFog, RotateCcw, Palette } from 'lucide-react';
+import { Sun, Contrast, Droplets, CloudFog, RotateCcw, Palette, ArrowDownToLine } from 'lucide-react';
 import type { ImageFilters } from '../../types';
 import { FILTER_PRESETS } from '../../types';
 
@@ -7,9 +7,10 @@ interface ImageAdjustmentsProps {
   hasBackground: boolean;
   onUpdate: (filters: Partial<ImageFilters>) => void;
   onReset: () => void;
+  onConvertToLayer?: () => void;
 }
 
-export function ImageAdjustments({ filters, hasBackground, onUpdate, onReset }: ImageAdjustmentsProps) {
+export function ImageAdjustments({ filters, hasBackground, onUpdate, onReset, onConvertToLayer }: ImageAdjustmentsProps) {
   if (!hasBackground) {
     return (
       <div className="text-center py-6">
@@ -123,6 +124,19 @@ export function ImageAdjustments({ filters, hasBackground, onUpdate, onReset }: 
           ))}
         </div>
       </div>
+
+      {/* Convert to Layer */}
+      {onConvertToLayer && (
+        <div className="pt-2 border-t border-border">
+          <button
+            onClick={onConvertToLayer}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-text-secondary bg-surface-hover hover:bg-surface-active hover:text-primary transition-all active:scale-[0.98]"
+          >
+            <ArrowDownToLine size={13} />
+            Convert to Layer (move, resize, blend)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

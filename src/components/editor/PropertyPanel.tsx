@@ -280,6 +280,24 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
         </Section>
       )}
 
+      {/* ─── Image Layer: Crop ─── */}
+      {isImage && (
+        <Section title="Crop">
+          <SliderRow label="Top" value={layer.imageCrop?.top ?? 0} min={0} max={50} unit="%" onChange={(v) => onUpdate({ imageCrop: { top: v, right: layer.imageCrop?.right ?? 0, bottom: layer.imageCrop?.bottom ?? 0, left: layer.imageCrop?.left ?? 0 } })} />
+          <SliderRow label="Bottom" value={layer.imageCrop?.bottom ?? 0} min={0} max={50} unit="%" onChange={(v) => onUpdate({ imageCrop: { top: layer.imageCrop?.top ?? 0, right: layer.imageCrop?.right ?? 0, bottom: v, left: layer.imageCrop?.left ?? 0 } })} />
+          <SliderRow label="Left" value={layer.imageCrop?.left ?? 0} min={0} max={50} unit="%" onChange={(v) => onUpdate({ imageCrop: { top: layer.imageCrop?.top ?? 0, right: layer.imageCrop?.right ?? 0, bottom: layer.imageCrop?.bottom ?? 0, left: v } })} />
+          <SliderRow label="Right" value={layer.imageCrop?.right ?? 0} min={0} max={50} unit="%" onChange={(v) => onUpdate({ imageCrop: { top: layer.imageCrop?.top ?? 0, right: v, bottom: layer.imageCrop?.bottom ?? 0, left: layer.imageCrop?.left ?? 0 } })} />
+          {layer.imageCrop && (layer.imageCrop.top > 0 || layer.imageCrop.right > 0 || layer.imageCrop.bottom > 0 || layer.imageCrop.left > 0) && (
+            <button
+              onClick={() => onUpdate({ imageCrop: undefined })}
+              className="text-xs text-primary hover:text-primary-hover transition-colors"
+            >
+              Reset Crop
+            </button>
+          )}
+        </Section>
+      )}
+
       {/* ─── Position ─── */}
       <Section title="Position">
         <SliderRow label="X" value={Math.round(layer.x)} min={0} max={1080} onChange={(v) => onUpdate({ x: v })} />

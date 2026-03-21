@@ -23,6 +23,7 @@ interface UseElementInteractionOptions {
   onUpdateLayer: (id: string, changes: Partial<TextLayer>) => void;
   onLayerTapped?: (layer: TextLayer) => void;
   onEnterEditMode?: (layerId: string) => void;
+  onTripleTap?: (layerId: string) => void;
 }
 
 type DragState =
@@ -76,12 +77,13 @@ export function useElementInteraction({
   onUpdateLayer,
   onLayerTapped,
   onEnterEditMode,
+  onTripleTap,
 }: UseElementInteractionOptions) {
   const dragRef = useRef<DragState>(null);
   // Snap lines: ref for 60fps updates, state for React render on commit
   const snapLinesRef = useRef<SnapLines>({ x: [], y: [] });
   const [snapLines, setSnapLines] = useState<SnapLines>({ x: [], y: [] });
-  const lastElementTapRef = useRef<{ layerId: string; time: number }>({ layerId: '', time: 0 });
+  const lastElementTapRef = useRef<{ layerId: string; time: number; count: number }>({ layerId: '', time: 0, count: 0 });
 
   // Convert client coordinates to canvas coordinates
   const clientToCanvas = useCallback((clientX: number, clientY: number) => {
@@ -148,19 +150,34 @@ export function useElementInteraction({
 
     e.stopPropagation(); // Prevent canvas pan
 
-    // Double-tap detection: if tapping an already-selected element within 400ms, enter edit mode
+    // Multi-tap detection: double-tap = edit mode, triple-tap = fit to canvas
     const now = Date.now();
-    if (
-      layerId === selectedLayerId &&
-      layerId === lastElementTapRef.current.layerId &&
-      now - lastElementTapRef.current.time < 400 &&
-      !layer.locked
-    ) {
-      lastElementTapRef.current = { layerId: '', time: 0 };
-      onEnterEditMode?.(layerId);
-      return; // Exit early — don't set up drag or capture
+    const prev = lastElementTapRef.current;
+    const isSameLayer = layerId === prev.layerId;
+    const isQuick = now - prev.time < 400;
+
+    if (isSameLayer && isQuick && !layer.locked) {
+      const newCount = prev.count + 1;
+      if (newCount >= 3) {
+        // Triple-tap → fit to canvas (for image/video layers)
+        lastElementTapRef.current = { layerId: '', time: 0, count: 0 };
+        if ((layer.elementType === 'image' || layer.elementType === 'video') && onTripleTap) {
+          onTripleTap(layerId);
+          return;
+        }
+      } else if (newCount === 2) {
+        // Double-tap → enter edit mode (for text layers)
+        lastElementTapRef.current = { layerId, time: now, count: newCount };
+        if (layerId === selectedLayerId) {
+          onEnterEditMode?.(layerId);
+          return;
+        }
+      } else {
+        lastElementTapRef.current = { layerId, time: now, count: newCount };
+      }
+    } else {
+      lastElementTapRef.current = { layerId, time: now, count: 1 };
     }
-    lastElementTapRef.current = { layerId, time: now };
 
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
 

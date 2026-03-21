@@ -2,7 +2,8 @@ import { useState, memo } from 'react';
 import {
   Plus, Image, Upload, Layers, SlidersHorizontal,
   Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate,
-  Square, RectangleVertical, RectangleHorizontal, Type as TypeIcon, Blend
+  Square, RectangleVertical, RectangleHorizontal, Type as TypeIcon, Blend,
+  FolderOpen, Maximize, ArrowDownToLine
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
@@ -20,6 +21,7 @@ interface MobileToolbarProps {
   onAddText: (overrides?: Partial<TextLayer>) => void;
   onAddImage: () => void;
   onOpenLibrary: () => void;
+  onAddImageFromLibrary?: () => void;
   onUpload: () => void;
   onOpenLayers: () => void;
   onOpenProperties: () => void;
@@ -28,6 +30,8 @@ interface MobileToolbarProps {
   onCloseOverlays: () => void;
   onOpenAdjustments: () => void;
   onOpenTemplates: () => void;
+  onConvertBgToLayer?: () => void;
+  onFitToCanvas?: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onSave: () => void;
@@ -50,6 +54,7 @@ export const MobileToolbar = memo(function MobileToolbar({
   onAddText,
   onAddImage,
   onOpenLibrary,
+  onAddImageFromLibrary,
   onUpload,
   onOpenLayers,
   onOpenProperties,
@@ -58,6 +63,8 @@ export const MobileToolbar = memo(function MobileToolbar({
   onCloseOverlays,
   onOpenAdjustments,
   onOpenTemplates,
+  onConvertBgToLayer,
+  onFitToCanvas,
   onUndo,
   onRedo,
   onSave,
@@ -117,6 +124,14 @@ export const MobileToolbar = memo(function MobileToolbar({
             >
               <Image size={16} className="text-primary" /> Image Layer
             </button>
+            {onAddImageFromLibrary && (
+              <button
+                onClick={() => { onAddImageFromLibrary(); setAddMenuOpen(false); }}
+                className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-text-secondary hover:bg-surface-hover rounded-xl transition-colors active:scale-[0.98]"
+              >
+                <FolderOpen size={16} className="text-primary" /> From Library
+              </button>
+            )}
           </div>
         </>
       )}
@@ -133,6 +148,12 @@ export const MobileToolbar = memo(function MobileToolbar({
             <PopoverButton icon={Image} label="Library" onClick={() => { onOpenLibrary(); setMoreOpen(false); }} />
             <PopoverButton icon={Upload} label="Upload" onClick={() => { onUpload(); setMoreOpen(false); }} />
             <PopoverButton icon={SlidersHorizontal} label="Adjustments" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} />
+            {onConvertBgToLayer && (
+              <PopoverButton icon={ArrowDownToLine} label="BG → Layer" onClick={() => { onConvertBgToLayer(); setMoreOpen(false); }} />
+            )}
+            {onFitToCanvas && (
+              <PopoverButton icon={Maximize} label="Fit to Canvas" onClick={() => { onFitToCanvas(); setMoreOpen(false); }} />
+            )}
             <div className="h-px bg-border/40 my-1 mx-2" />
             {/* Canvas size shortcuts */}
             {onSetCanvasSize && (

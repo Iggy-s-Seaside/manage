@@ -67,6 +67,7 @@ export function SpecialEditor() {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryMode, setLibraryMode] = useState<'background' | 'layer'>('background');
   const [rightTab, setRightTab] = useState<RightTab>('properties');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<MobileSheet>(null);
@@ -230,9 +231,135 @@ export function SpecialEditor() {
   }, [upload, dispatch]);
 
   const handleLibrarySelect = useCallback((url: string) => {
-    dispatch({ type: 'SET_BACKGROUND', url });
-    toast.success('Background set from library');
-  }, [dispatch]);
+    if (libraryMode === 'layer') {
+      // Insert as a movable image layer — need to get dimensions first
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const maxWidth = Math.min(img.naturalWidth, state.canvasWidth * 0.8);
+        const ratio = img.naturalHeight / img.naturalWidth;
+        const layerWidth = Math.round(maxWidth);
+        const layerHeight = Math.round(maxWidth * ratio);
+        addTextLayer({
+          elementType: 'image',
+          text: url.split('/').pop() || 'Image',
+          imageSrc: url,
+          imageHeight: layerHeight,
+          width: layerWidth,
+          fontSize: 16,
+        });
+        toast.success('Image layer added');
+      };
+      img.onerror = () => {
+        toast.error('Failed to load image');
+      };
+      img.src = url;
+    } else {
+      dispatch({ type: 'SET_BACKGROUND', url });
+      toast.success('Background set from library');
+    }
+  }, [libraryMode, dispatch, addTextLayer, state.canvasWidth]);
+
+  /** Convert background image into a full image layer (move, resize, blend, etc.) */
+  const handleConvertBgToLayer = useCallback(() => {
+    const bgUrl = state.backgroundImage;
+    if (!bgUrl) return;
+
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Calculate dimensions to cover the canvas
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const canvasRatio = state.canvasWidth / state.canvasHeight;
+      let layerWidth: number, layerHeight: number;
+      if (imgRatio > canvasRatio) {
+        // Image is wider — fit height, overflow width
+        layerHeight = state.canvasHeight;
+        layerWidth = Math.round(layerHeight * imgRatio);
+      } else {
+        // Image is taller — fit width, overflow height
+        layerWidth = state.canvasWidth;
+        layerHeight = Math.round(layerWidth / imgRatio);
+      }
+
+      // Center within canvas
+      const x = Math.round((state.canvasWidth - layerWidth) / 2);
+      const y = Math.round((state.canvasHeight - layerHeight) / 2);
+
+      // Transfer current background filters to the new layer
+      const currentFilters = { ...state.imageFilters };
+
+      addTextLayer({
+        elementType: 'image',
+        text: bgUrl.split('/').pop() || 'Background',
+        imageSrc: bgUrl,
+        imageHeight: layerHeight,
+        width: layerWidth,
+        fontSize: 16,
+        x,
+        y,
+        imageFilters: currentFilters,
+      });
+
+      // Clear background & reset filters
+      dispatch({ type: 'SET_BACKGROUND', url: null });
+      dispatch({ type: 'RESET_IMAGE_FILTERS' });
+      toast.success('Background converted to layer — move, resize, and blend it!');
+    };
+    img.onerror = () => toast.error('Failed to load background image');
+    img.src = bgUrl;
+  }, [state.backgroundImage, state.canvasWidth, state.canvasHeight, state.imageFilters, addTextLayer, dispatch]);
+
+  /** Fit an image/video layer to fill the canvas (triggered by triple-tap) */
+  const handleFitLayerToCanvas = useCallback((layerId: string) => {
+    const layer = state.layers.find(l => l.id === layerId);
+    if (!layer || (layer.elementType !== 'image' && layer.elementType !== 'video')) return;
+
+    const src = layer.imageSrc || layer.videoSrc;
+    if (!src) return;
+
+    // For images, get natural dimensions; for videos, use current aspect ratio
+    if (layer.elementType === 'image') {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const imgRatio = img.naturalWidth / img.naturalHeight;
+        const canvasRatio = state.canvasWidth / state.canvasHeight;
+        let w: number, h: number;
+        if (imgRatio > canvasRatio) {
+          h = state.canvasHeight;
+          w = Math.round(h * imgRatio);
+        } else {
+          w = state.canvasWidth;
+          h = Math.round(w / imgRatio);
+        }
+        const x = Math.round((state.canvasWidth - w) / 2);
+        const y = Math.round((state.canvasHeight - h) / 2);
+        dispatch({ type: 'UPDATE_LAYER', id: layerId, changes: { width: w, imageHeight: h, x, y } });
+        toast.success('Fit to canvas');
+        if ('vibrate' in navigator) navigator.vibrate([15, 30, 15]);
+      };
+      img.src = src;
+    } else {
+      // Video: use current aspect ratio
+      const currentH = layer.imageHeight || layer.width;
+      const ratio = layer.width / currentH;
+      const canvasRatio = state.canvasWidth / state.canvasHeight;
+      let w: number, h: number;
+      if (ratio > canvasRatio) {
+        h = state.canvasHeight;
+        w = Math.round(h * ratio);
+      } else {
+        w = state.canvasWidth;
+        h = Math.round(w / ratio);
+      }
+      const x = Math.round((state.canvasWidth - w) / 2);
+      const y = Math.round((state.canvasHeight - h) / 2);
+      dispatch({ type: 'UPDATE_LAYER', id: layerId, changes: { width: w, imageHeight: h, x, y } });
+      toast.success('Fit to canvas');
+      if ('vibrate' in navigator) navigator.vibrate([15, 30, 15]);
+    }
+  }, [state.layers, state.canvasWidth, state.canvasHeight, dispatch]);
 
   const handleExport = useCallback((format: 'png' | 'jpeg' = 'png', quality = 92) => {
     dispatch({ type: 'SELECT_LAYER', id: null });
@@ -894,6 +1021,7 @@ export function SpecialEditor() {
               // Don't auto-open properties on tap — let users drag freely.
               // Properties are auto-opened only when ADDING a new layer from presets.
             }}
+            onTripleTap={handleFitLayerToCanvas}
           />
         </div>
 
@@ -944,6 +1072,7 @@ export function SpecialEditor() {
                 hasBackground={!!state.backgroundImage}
                 onUpdate={(filters) => dispatch({ type: 'SET_IMAGE_FILTERS', filters })}
                 onReset={() => dispatch({ type: 'RESET_IMAGE_FILTERS' })}
+                onConvertToLayer={state.backgroundImage ? handleConvertBgToLayer : undefined}
               />
             )}
           </div>
@@ -958,7 +1087,10 @@ export function SpecialEditor() {
           setMobileSheet('properties');
         }}
         onAddImage={() => { closeAllOverlays(); imageLayerInputRef.current?.click(); }}
-        onOpenLibrary={() => { closeAllOverlays(); setLibraryOpen(true); }}
+        onOpenLibrary={() => { closeAllOverlays(); setLibraryMode('background'); setLibraryOpen(true); }}
+        onAddImageFromLibrary={() => { closeAllOverlays(); setLibraryMode('layer'); setLibraryOpen(true); }}
+        onConvertBgToLayer={state.backgroundImage ? handleConvertBgToLayer : undefined}
+        onFitToCanvas={selectedLayer && (selectedLayer.elementType === 'image' || selectedLayer.elementType === 'video') ? () => handleFitLayerToCanvas(selectedLayer.id) : undefined}
         onUpload={() => { closeAllOverlays(); bgInputRef.current?.click(); }}
         onOpenLayers={() => { closeAllOverlays(); setMobileSheet('layers'); }}
         onOpenProperties={() => { closeAllOverlays(); setMobileSheet('properties'); }}

@@ -67,6 +67,8 @@ export const ImageElement = memo<ImageElementProps>(({
 
   const filterCSS = buildFilterCSS(layer.imageFilters);
   const height = layer.imageHeight || layer.width; // default to square
+  const crop = layer.imageCrop;
+  const clipPath = crop ? `inset(${crop.top}% ${crop.right}% ${crop.bottom}% ${crop.left}%)` : undefined;
 
   return (
     <div
@@ -87,6 +89,7 @@ export const ImageElement = memo<ImageElementProps>(({
         willChange: isSelected ? 'transform' : 'auto',
         borderRadius: 4,
         overflow: 'hidden',
+        clipPath,
         mixBlendMode: (layer.blendMode || 'normal') as React.CSSProperties['mixBlendMode'],
       }}
     >
