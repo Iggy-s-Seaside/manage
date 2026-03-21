@@ -60,11 +60,8 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
       const toolbarH = isMobile ? 60 : 0;
       const scaleX = (vw - padding) / state.canvasWidth;
       const scaleY = (vh - padding - toolbarH) / state.canvasHeight;
-      // On mobile: fit canvas fully in the visible area (above toolbar)
-      // so the entire design is visible without scrolling
-      const newFit = isMobile
-        ? Math.min(scaleX, scaleY, 1)
-        : Math.min(scaleX, scaleY, 1);
+      // Fit canvas fully in the visible area (above toolbar on mobile)
+      const newFit = Math.min(scaleX, scaleY, 1);
       setFitScale(newFit);
     };
 
@@ -225,7 +222,6 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
         {state.selectedLayerId && !editingLayerId && (
           <SelectionOverlay
             layer={state.layers.find(l => l.id === state.selectedLayerId)!}
-            allLayers={state.layers}
             canvasWidth={state.canvasWidth}
             canvasHeight={state.canvasHeight}
             snapLines={interaction.snapLines}

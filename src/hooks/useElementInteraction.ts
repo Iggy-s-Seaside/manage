@@ -244,128 +244,23 @@ export function useElementInteraction({
         }
 
         // Keep selection overlay in sync during drag
-        const h = estimateHeight(layer);
-        syncSelectionOverlay(contentRef, finalX, finalY, layer.width, h, layer.rotation || 0);
+        syncSelectionOverlay(contentRef, finalX, finalY, layer.width, height, layer.rotation || 0);
 
         // Store current position for commit on pointerup
         drag.currentX = finalX;
         drag.currentY = finalY;
       }
 
-      if (drag.type === 'resize') {
-        const deltaX = cx - drag.startX;
-        const deltaY = cy - drag.startY;
-
-        // Proportional resize using diagonal distance
-        // Project the mouse delta onto the diagonal from center to the handle corner
-        const isRight = drag.handle === 'ne' || drag.handle === 'se';
-        const isBottom = drag.handle === 'se' || drag.handle === 'sw';
-        const dirX = isRight ? 1 : -1;
-        const dirY = isBottom ? 1 : -1;
-        // Normalize diagonal direction
-        const diagLen = Math.sqrt(drag.startWidth * drag.startWidth + drag.startHeight * drag.startHeight);
-        const normX = (drag.startWidth * dirX) / diagLen;
-        const normY = (drag.startHeight * dirY) / diagLen;
-        const projection = deltaX * normX + deltaY * normY;
-        const scale = Math.max(0.1, (diagLen + projection * dirX) / diagLen);
-
-        let newWidth = Math.max(50, Math.round(drag.startWidth * scale));
-        const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
-        const newImageHeight = Math.max(30, Math.round(drag.startImageHeight * scale));
-
-        // Clamp to canvas bounds
-        newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
-
-        // For images, also limit height to canvas bounds
-        let clampedImageHeight = newImageHeight;
-        if (drag.isImage) {
-          clampedImageHeight = Math.min(newImageHeight, canvasHeight);
-        }
-
-        // Adjust position for left-side handles
-        let newX: number;
-        let newY = drag.startLayerY;
-        if (isRight) {
-          newX = drag.startLayerX;
-        } else {
-          newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
-        }
-        // For top handles, adjust Y based on height change
-        if (!isBottom) {
-          const newHeight = drag.isImage ? clampedImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
-          newY = Math.round(drag.startLayerY + (drag.startHeight - newHeight));
-        }
-
-        newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
-
-        // Clamp Y to canvas bounds
-        const finalHeight = drag.isImage ? clampedImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
-        newY = Math.max(0, Math.min(newY, canvasHeight - finalHeight));
-
-        // Direct DOM update for width + position + fontSize/height
-        const el = findLayerElement(contentRef, drag.id);
-        if (el) {
-          el.style.width = `${newWidth}px`;
-          if (drag.isImage) {
-            el.style.height = `${clampedImageHeight}px`;
-          } else {
-            el.style.fontSize = `${newFontSize}px`;
-          }
-          applyPositionToDOM(el, newX, newY, layer.rotation || undefined);
-        }
-
-        // Sync selection overlay during resize
-        syncSelectionOverlay(contentRef, newX, newY, newWidth, finalHeight, layer.rotation || 0);
-
-        drag.currentWidth = newWidth;
-        drag.currentFontSize = newFontSize;
-        drag.currentImageHeight = drag.isImage ? clampedImageHeight : newImageHeight;
-        drag.currentLayerX = newX;
-        drag.currentLayerY = newY;
-      }
-
-      if (drag.type === 'rotate') {
-        const rawAngle = Math.atan2(cy - drag.centerY, cx - drag.centerX) * 180 / Math.PI;
-        let angle = rawAngle - drag.startAngle;
-        angle = ((angle % 360) + 360) % 360;
-
-        // Snap to 45° increments
-        for (const snap of ROTATION_SNAP_ANGLES) {
-          if (Math.abs(angle - snap) <= ROTATION_SNAP_THRESHOLD) {
-            angle = snap === 360 ? 0 : snap;
-            if ('vibrate' in navigator) navigator.vibrate(10);
-            break;
-          }
-        }
-
-        const finalAngle = Math.round(angle);
-
-        // Direct DOM update
-        const el = findLayerElement(contentRef, drag.id);
-        if (el) {
-          applyPositionToDOM(el, layer.x, layer.y, finalAngle);
-        }
-
-        // Sync selection overlay rotation
-        const h = estimateHeight(layer);
-        syncSelectionOverlay(contentRef, layer.x, layer.y, layer.width, h, finalAngle);
-
-        drag.currentRotation = finalAngle;
-      }
+      // Note: resize and rotate are handled exclusively by handleHandlePointerDown.
+      // This handler only creates 'pending' or 'move' drag states.
     };
 
     const onUp = () => {
       const drag = dragRef.current;
 
-      // Commit final position to React state (single update)
+      // Commit final position to React state
       if (drag?.type === 'move') {
         onUpdateLayer(drag.id, { x: drag.currentX, y: drag.currentY });
-      } else if (drag?.type === 'resize') {
-        const changes: Partial<TextLayer> = { width: drag.currentWidth, fontSize: drag.currentFontSize, x: drag.currentLayerX, y: drag.currentLayerY };
-        if (drag.isImage) changes.imageHeight = drag.currentImageHeight;
-        onUpdateLayer(drag.id, changes);
-      } else if (drag?.type === 'rotate') {
-        onUpdateLayer(drag.id, { rotation: drag.currentRotation });
       }
 
       dragRef.current = null;
@@ -449,7 +344,7 @@ export function useElementInteraction({
         const normX = (drag.startWidth * dirX) / diagLen;
         const normY = (drag.startHeight * dirY) / diagLen;
         const projection = deltaX * normX + deltaY * normY;
-        const scale = Math.max(0.1, (diagLen + projection * dirX) / diagLen);
+        const scale = Math.max(0.1, (diagLen + projection) / diagLen);
 
         let newWidth = Math.max(50, Math.round(drag.startWidth * scale));
         const newFontSize = Math.max(8, Math.round(drag.startFontSize * scale));
@@ -552,7 +447,7 @@ export function useElementInteraction({
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
-  }, [layers, selectedLayerId, clientToCanvas, contentRef, onUpdateLayer]);
+  }, [layers, selectedLayerId, clientToCanvas, contentRef, onUpdateLayer, canvasWidth, canvasHeight]);
 
   return {
     snapLines,

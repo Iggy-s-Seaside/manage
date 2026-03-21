@@ -9,7 +9,6 @@ interface SnapLines {
 
 interface SelectionOverlayProps {
   layer: TextLayer;
-  allLayers: TextLayer[];
   canvasWidth: number;
   canvasHeight: number;
   snapLines: SnapLines;
@@ -34,7 +33,7 @@ const ROTATION_OFFSET = 30;
 
 type HandleId = 'nw' | 'ne' | 'sw' | 'se' | 'rotate';
 
-const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
 export const SelectionOverlay = memo<SelectionOverlayProps>(({
   layer,
