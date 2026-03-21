@@ -20,8 +20,8 @@ const MIN_TOUCH_HEIGHT = 44;
 
 /** Estimate element height based on type */
 function estimateHeight(layer: TextLayer): number {
-  if (layer.elementType === 'image') {
-    return layer.imageHeight || layer.width; // Images have explicit height
+  if (layer.elementType === 'image' || layer.elementType === 'video') {
+    return layer.imageHeight || layer.width; // Images/videos have explicit height
   }
   const lines = layer.text.split('\n');
   const lh = layer.lineHeight || 1.3;

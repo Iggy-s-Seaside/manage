@@ -29,6 +29,11 @@ import { useDraftPersistence } from '../hooks/useDraftPersistence';
 import { TEMPLATES } from '../data/templates';
 import type { Special, TextLayer, UserTemplate } from '../types';
 import { DEFAULT_IMAGE_FILTERS } from '../types';
+import { VideoRefProvider } from '../context/VideoRefContext';
+import { storeMedia, generateMediaId, makeIdbRef } from '../lib/mediaStore';
+import { useMediaSync } from '../hooks/useMediaSync';
+import { exportToGif } from '../components/editor/exportToGif';
+import { ExportProgressModal } from '../components/editor/ExportProgressModal';
 
 // Text presets for quick add
 const TEXT_PRESETS = [
@@ -56,6 +61,7 @@ export function SpecialEditor() {
   const { upload, uploading } = useImageUpload();
   const { data: specials, create, update } = useSupabaseCRUD<Special>('specials');
   const { data: userTemplates, create: createTemplate, remove: removeTemplate } = useSupabaseCRUD<UserTemplate>('user_templates');
+  const { syncToSupabase } = useMediaSync();
   // No more CSS-transform zoom wrapper — canvas handles its own scale internally.
 
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -72,6 +78,11 @@ export function SpecialEditor() {
   const [exportFormat, setExportFormat] = useState<'png' | 'jpeg'>('png');
   const [exportQuality, setExportQuality] = useState(92);
   const [currentScale, setCurrentScale] = useState(1);
+  // GIF export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportedBlob, setExportedBlob] = useState<Blob | null>(null);
+  const exportAbortRef = useRef<AbortController | null>(null);
   const [isGesturing, setIsGesturing] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [mobileFontPickerOpen, setMobileFontPickerOpen] = useState(false);
@@ -127,40 +138,42 @@ export function SpecialEditor() {
   const draftPromptShown = useRef(false);
   useEffect(() => {
     if (draftPromptShown.current) return;
-    if (hasDraft()) {
-      const draft = loadDraft();
-      if (draft) {
-        draftPromptShown.current = true;
-        toast((t) => (
-          <div className="flex items-center gap-3">
-            <span className="text-sm">Resume your draft?</span>
-            <button
-              onClick={() => {
-                const editorState = {
-                  ...draft.editorState,
-                  imageFilters: draft.editorState.imageFilters || { ...DEFAULT_IMAGE_FILTERS },
-                };
-                dispatch({ type: 'LOAD_STATE', state: editorState });
-                setSaveForm(draft.saveForm);
-                toast.dismiss(t.id);
-              }}
-              className="px-3 py-1 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary-hover"
-            >
-              Restore
-            </button>
-            <button
-              onClick={() => {
-                clearDraft();
-                toast.dismiss(t.id);
-              }}
-              className="px-3 py-1 text-xs font-medium bg-surface-hover text-text-secondary rounded-lg hover:bg-surface-active"
-            >
-              Discard
-            </button>
-          </div>
-        ), { duration: 10000 });
-      }
-    }
+    if (!hasDraft()) return;
+
+    draftPromptShown.current = true;
+
+    // loadDraft is async (resolves idb:// media refs from IndexedDB)
+    loadDraft().then((draft) => {
+      if (!draft) return;
+      toast((t) => (
+        <div className="flex items-center gap-3">
+          <span className="text-sm">Resume your draft?</span>
+          <button
+            onClick={() => {
+              const editorState = {
+                ...draft.editorState,
+                imageFilters: draft.editorState.imageFilters || { ...DEFAULT_IMAGE_FILTERS },
+              };
+              dispatch({ type: 'LOAD_STATE', state: editorState });
+              setSaveForm(draft.saveForm);
+              toast.dismiss(t.id);
+            }}
+            className="px-3 py-1 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary-hover"
+          >
+            Restore
+          </button>
+          <button
+            onClick={() => {
+              clearDraft();
+              toast.dismiss(t.id);
+            }}
+            className="px-3 py-1 text-xs font-medium bg-surface-hover text-text-secondary rounded-lg hover:bg-surface-active"
+          >
+            Discard
+          </button>
+        </div>
+      ), { duration: 10000 });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -236,6 +249,36 @@ export function SpecialEditor() {
     }, 100);
   }, [dispatch]);
 
+  const handleExportGif = useCallback(async () => {
+    const refs = canvasRef.current?.getVideoRefs();
+    if (!refs) return;
+
+    dispatch({ type: 'SELECT_LAYER', id: null });
+    setExportModalOpen(false);
+    setIsExporting(true);
+    setExportProgress(0);
+    setExportedBlob(null);
+
+    const abort = new AbortController();
+    exportAbortRef.current = abort;
+
+    try {
+      const blob = await exportToGif(state, refs, {
+        fps: 15,
+        onProgress: setExportProgress,
+        abortSignal: abort.signal,
+      });
+      setExportedBlob(blob);
+      setExportProgress(1);
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') {
+        toast.error('GIF export failed');
+        console.error('[exportGif]', e);
+      }
+      setIsExporting(false);
+    }
+  }, [state, dispatch]);
+
   const handleSave = async () => {
     setSaving(true);
 
@@ -274,33 +317,111 @@ export function SpecialEditor() {
     }
   };
 
-  // Add image layer from file
-  const handleAddImageLayer = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      // Create an image to get natural dimensions
+  // Add image or video layer from file — stores in IndexedDB for persistence
+  const handleAddMediaLayer = useCallback(async (file: File) => {
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+
+    if (!isImage && !isVideo) {
+      toast.error('Unsupported file type. Use an image or video.');
+      return;
+    }
+    if (isVideo && file.size > 50 * 1024 * 1024) {
+      toast.error('Video must be under 50 MB');
+      return;
+    }
+    if (isImage && file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be under 10 MB');
+      return;
+    }
+
+    // Store blob in IndexedDB and get a persistent reference
+    const mediaId = generateMediaId();
+    const idbRef = makeIdbRef(mediaId);
+
+    await storeMedia(mediaId, file, {
+      filename: file.name,
+      mimeType: file.type,
+      size: file.size,
+      createdAt: new Date().toISOString(),
+    });
+
+    if (isVideo) {
+      // Read video dimensions/duration + capture poster frame
+      const blobUrl = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      video.src = blobUrl;
+
+      video.onloadedmetadata = () => {
+        const naturalW = video.videoWidth;
+        const naturalH = video.videoHeight;
+        const maxWidth = Math.min(naturalW, state.canvasWidth * 0.8);
+        const ratio = naturalH / naturalW;
+        const layerWidth = Math.round(maxWidth);
+        const layerHeight = Math.round(maxWidth * ratio);
+
+        // Seek to capture a poster frame
+        video.currentTime = 0.1;
+        video.onseeked = () => {
+          let posterSrc: string | undefined;
+          try {
+            const c = document.createElement('canvas');
+            c.width = Math.min(naturalW, 400);
+            c.height = Math.round(c.width * ratio);
+            const ctx = c.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(video, 0, 0, c.width, c.height);
+              posterSrc = c.toDataURL('image/jpeg', 0.7);
+            }
+          } catch { /* poster capture failed — non-critical */ }
+
+          addTextLayer({
+            elementType: 'video',
+            text: file.name,
+            videoSrc: idbRef, // idb:// ref — VideoElement resolves to blob URL
+            videoPosterSrc: posterSrc,
+            videoDuration: video.duration,
+            videoMuted: true,
+            videoLoop: true,
+            imageHeight: layerHeight,
+            width: layerWidth,
+            fontSize: 16,
+          });
+
+          URL.revokeObjectURL(blobUrl);
+          video.remove();
+        };
+      };
+    } else {
+      // Image path — read dimensions, store idb:// ref
+      const blobUrl = URL.createObjectURL(file);
       const img = new window.Image();
       img.onload = () => {
         const maxWidth = Math.min(img.naturalWidth, state.canvasWidth * 0.8);
         const ratio = img.naturalHeight / img.naturalWidth;
         const layerWidth = Math.round(maxWidth);
         const layerHeight = Math.round(maxWidth * ratio);
+
         addTextLayer({
           elementType: 'image',
-          text: file.name, // Store filename as label
-          imageSrc: dataUrl,
+          text: file.name,
+          imageSrc: idbRef, // idb:// ref — ImageElement will need resolution
           imageHeight: layerHeight,
           width: layerWidth,
-          fontSize: 16, // Unused for image but required by type
-          x: Math.round((state.canvasWidth - layerWidth) / 2),
-          y: Math.round((state.canvasHeight - layerHeight) / 2),
+          fontSize: 16,
         });
+
+        URL.revokeObjectURL(blobUrl);
       };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
-  }, [state.canvasWidth, state.canvasHeight, addTextLayer]);
+      img.src = blobUrl;
+    }
+
+    // Background Supabase upload (fire and forget)
+    syncToSupabase(idbRef, isVideo ? 'media/video' : 'media/image');
+  }, [state.canvasWidth, state.canvasHeight, addTextLayer, syncToSupabase]);
 
   const handleDuplicate = useCallback((layer: TextLayer) => {
     const { id: _id, ...rest } = layer;
@@ -492,6 +613,7 @@ export function SpecialEditor() {
   }, []);
 
   return (
+    <VideoRefProvider>
     <div className="md:h-[calc(100vh-3rem)] md:-m-6 lg:-m-8 md:relative md:flex md:flex-col fixed inset-0 z-50 flex flex-col bg-background">
       {/* Desktop Toolbar — hidden on mobile (MobileToolbar handles it) */}
       <div className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-surface border-b border-border shrink-0 overflow-x-auto">
@@ -559,9 +681,9 @@ export function SpecialEditor() {
           {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} Upload
         </button>
         <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
-        <input ref={imageLayerInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+        <input ref={imageLayerInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) handleAddImageLayer(file);
+          if (file) handleAddMediaLayer(file);
           if (imageLayerInputRef.current) imageLayerInputRef.current.value = '';
         }} />
 
@@ -858,7 +980,7 @@ export function SpecialEditor() {
         canRedo={canRedo}
         uploading={uploading}
         hasSelection={!!selectedLayer}
-        isImageSelected={selectedLayer?.elementType === 'image'}
+        isImageSelected={selectedLayer?.elementType === 'image' || selectedLayer?.elementType === 'video'}
         activeSheet={mobileSheet}
         gestureActive={isGesturing}
       />
@@ -884,7 +1006,7 @@ export function SpecialEditor() {
       <BottomSheet
         open={mobileSheet === 'properties'}
         onClose={() => setMobileSheet(null)}
-        title={selectedLayer?.elementType === 'divider' ? 'Divider Properties' : selectedLayer?.elementType === 'image' ? 'Image Properties' : 'Text Properties'}
+        title={selectedLayer?.elementType === 'divider' ? 'Divider Properties' : (selectedLayer?.elementType === 'image' || selectedLayer?.elementType === 'video') ? 'Media Properties' : 'Text Properties'}
       >
         {selectedLayer ? (
           <PropertyPanel
@@ -930,7 +1052,7 @@ export function SpecialEditor() {
       )}
 
       {/* Mobile floating blend picker — overlays canvas for real-time preview */}
-      {mobileBlendPickerOpen && selectedLayer && selectedLayer.elementType === 'image' && (
+      {mobileBlendPickerOpen && selectedLayer && (selectedLayer.elementType === 'image' || selectedLayer.elementType === 'video') && (
         <MobileBlendPicker
           layer={selectedLayer}
           onUpdate={(changes) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, changes })}
@@ -965,10 +1087,29 @@ export function SpecialEditor() {
       />
 
       {/* Export Modal */}
-      <Modal open={exportModalOpen} onClose={() => setExportModalOpen(false)} title="Export Image" maxWidth="max-w-sm">
+      <Modal open={exportModalOpen} onClose={() => setExportModalOpen(false)} title="Export" maxWidth="max-w-sm">
         <div className="space-y-4">
+          {/* GIF option — shown when video layers exist */}
+          {state.layers.some(l => l.elementType === 'video') && (
+            <button
+              onClick={handleExportGif}
+              className="w-full py-3 px-4 rounded-xl bg-surface-hover hover:bg-surface-active text-left transition-colors border border-border/30"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎬</span>
+                <div>
+                  <p className="text-sm font-medium text-text-primary">Animated GIF</p>
+                  <p className="text-xs text-text-muted">Exports video layers as animated GIF</p>
+                </div>
+              </div>
+            </button>
+          )}
+
+          {/* Static image export */}
           <div>
-            <label className="text-xs font-medium text-text-secondary mb-1.5 block">Format</label>
+            <label className="text-xs font-medium text-text-secondary mb-1.5 block">
+              {state.layers.some(l => l.elementType === 'video') ? 'Still Frame' : 'Format'}
+            </label>
             <div className="flex gap-2">
               <button
                 onClick={() => setExportFormat('png')}
@@ -983,9 +1124,9 @@ export function SpecialEditor() {
                 JPEG
               </button>
             </div>
-            <p className="text-[13px] text-text-muted mt-1">
-              {exportFormat === 'png' ? 'Lossless quality, larger file size. Best for graphics with text.' : 'Smaller file size, adjustable quality. Best for photos.'}
-            </p>
+            {state.layers.some(l => l.elementType === 'video') && (
+              <p className="text-[13px] text-text-muted mt-1">Captures the current video frame as a still image</p>
+            )}
           </div>
           {exportFormat === 'jpeg' && (
             <div>
@@ -1013,6 +1154,25 @@ export function SpecialEditor() {
           </button>
         </div>
       </Modal>
+
+      {/* GIF Export Progress */}
+      {isExporting && (
+        <ExportProgressModal
+          progress={exportProgress}
+          done={exportedBlob !== null}
+          blob={exportedBlob}
+          format="gif"
+          onCancel={() => {
+            exportAbortRef.current?.abort();
+            setIsExporting(false);
+            setExportedBlob(null);
+          }}
+          onClose={() => {
+            setIsExporting(false);
+            setExportedBlob(null);
+          }}
+        />
+      )}
 
       {/* Template Picker — shared grid used in both Modal (desktop) and BottomSheet (mobile) */}
       {(() => {
@@ -1203,5 +1363,6 @@ export function SpecialEditor() {
         </div>
       </Modal>
     </div>
+    </VideoRefProvider>
   );
 }

@@ -1,11 +1,12 @@
-import { memo, useCallback, useEffect, useState, useRef } from 'react';
+import { memo, useCallback, useRef, useEffect, useState } from 'react';
 import type { TextLayer } from '../../types';
+import { useVideoRefs } from '../../context/VideoRefContext';
 import { resolveMediaSrc, revokeMediaUrl, isIdbRef } from '../../lib/mediaStore';
 
 /** Minimum touch target size in screen pixels (Apple HIG) */
 const MIN_TOUCH_TARGET = 44;
 
-interface ImageElementProps {
+interface VideoElementProps {
   layer: TextLayer;
   isSelected: boolean;
   onPointerDown?: (e: React.PointerEvent, layerId: string) => void;
@@ -23,22 +24,21 @@ function buildFilterCSS(filters?: TextLayer['imageFilters']): string | undefined
   return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
-export const ImageElement = memo<ImageElementProps>(({
+export const VideoElement = memo<VideoElementProps>(({
   layer,
   isSelected,
   onPointerDown,
   zoom = 1,
 }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { register, unregister } = useVideoRefs();
   const [resolvedSrc, setResolvedSrc] = useState<string>('');
   const prevBlobUrl = useRef<string>('');
 
-  // Resolve idb:// refs to blob URLs, pass through http/data URLs
+  // Resolve idb:// refs to blob URLs
   useEffect(() => {
-    const src = layer.imageSrc;
-    if (!src) {
-      setResolvedSrc('');
-      return;
-    }
+    const src = layer.videoSrc;
+    if (!src) return;
 
     if (isIdbRef(src)) {
       resolveMediaSrc(src).then((url) => {
@@ -52,12 +52,24 @@ export const ImageElement = memo<ImageElementProps>(({
     }
 
     return () => {
+      // Revoke previous blob URL on src change or unmount
       if (prevBlobUrl.current) {
         revokeMediaUrl(prevBlobUrl.current);
         prevBlobUrl.current = '';
       }
     };
-  }, [layer.imageSrc]);
+  }, [layer.videoSrc]);
+
+  // Register video ref for export pipeline
+  useEffect(() => {
+    const el = videoRef.current;
+    if (el) {
+      register(layer.id, el);
+    }
+    return () => {
+      unregister(layer.id);
+    };
+  }, [layer.id, register, unregister, resolvedSrc]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     onPointerDown?.(e, layer.id);
@@ -66,7 +78,7 @@ export const ImageElement = memo<ImageElementProps>(({
   if (!layer.visible || !resolvedSrc) return null;
 
   const filterCSS = buildFilterCSS(layer.imageFilters);
-  const height = layer.imageHeight || layer.width; // default to square
+  const height = layer.imageHeight || layer.width;
 
   return (
     <div
@@ -90,7 +102,7 @@ export const ImageElement = memo<ImageElementProps>(({
         mixBlendMode: (layer.blendMode || 'normal') as React.CSSProperties['mixBlendMode'],
       }}
     >
-      {/* Invisible touch target expander — ensures at least 44px screen-space tap area */}
+      {/* Invisible touch target expander */}
       {zoom < 1 && (() => {
         const expandY = Math.max(0, (MIN_TOUCH_TARGET / zoom - height) / 2);
         return expandY > 0 ? (
@@ -106,10 +118,18 @@ export const ImageElement = memo<ImageElementProps>(({
           />
         ) : null;
       })()}
-      {/* Image */}
-      <img
+
+      {/* Video — all attributes critical for iOS inline autoplay */}
+      <video
+        ref={videoRef}
         src={resolvedSrc}
-        alt=""
+        autoPlay
+        muted={layer.videoMuted !== false}
+        loop={layer.videoLoop !== false}
+        playsInline
+        // @ts-expect-error webkit-playsinline is non-standard but required for older iOS
+        webkit-playsinline=""
+        poster={layer.videoPosterSrc}
         draggable={false}
         style={{
           width: '100%',
@@ -117,6 +137,7 @@ export const ImageElement = memo<ImageElementProps>(({
           objectFit: layer.imageFit || 'cover',
           filter: filterCSS,
           display: 'block',
+          pointerEvents: 'none', // Don't let video steal taps
         }}
       />
 
@@ -136,4 +157,4 @@ export const ImageElement = memo<ImageElementProps>(({
   );
 });
 
-ImageElement.displayName = 'ImageElement';
+VideoElement.displayName = 'VideoElement';

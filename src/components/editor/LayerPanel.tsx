@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Type, Minus, ChevronUp, ChevronDown, Trash2, Copy, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
+import { Type, Minus, ChevronUp, ChevronDown, Trash2, Copy, Eye, EyeOff, Lock, Unlock, Image, Video } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
 interface LayerPanelProps {
@@ -60,6 +60,10 @@ export const LayerPanel = memo(function LayerPanel({
 
                   {layer.elementType === 'divider'
                     ? <Minus size={13} className="text-text-muted shrink-0" />
+                    : layer.elementType === 'video'
+                    ? <Video size={13} className="text-text-muted shrink-0" />
+                    : layer.elementType === 'image'
+                    ? <Image size={13} className="text-text-muted shrink-0" />
                     : <Type size={13} className="text-text-muted shrink-0" />
                   }
                   <span className="text-xs text-text-primary truncate flex-1">

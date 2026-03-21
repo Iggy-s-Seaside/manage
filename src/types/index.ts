@@ -105,7 +105,7 @@ export const DEFAULT_IMAGE_FILTERS: ImageFilters = {
 
 export interface TextLayer {
   id: string;
-  elementType?: 'text' | 'divider' | 'image'; // default 'text'
+  elementType?: 'text' | 'divider' | 'image' | 'video'; // default 'text'
   text: string;
   x: number;
   y: number;
@@ -143,6 +143,12 @@ export interface TextLayer {
   imageFilters?: ImageFilters;   // Per-layer image filters
   imageFit?: 'cover' | 'contain' | 'fill'; // How image fills its bounds
   blendMode?: string; // CSS mix-blend-mode (screen, multiply, overlay, etc.)
+  // Video-specific fields (used when elementType === 'video')
+  videoSrc?: string;             // URL, blob URL, or idb:// reference
+  videoPosterSrc?: string;       // First frame as JPEG data URL (for thumbnails/layer panel)
+  videoDuration?: number;        // Duration in seconds
+  videoMuted?: boolean;          // Default true
+  videoLoop?: boolean;           // Default true
 }
 
 export interface EditorState {

@@ -344,15 +344,100 @@ function drawImageLayerToCtx(ctx: CanvasRenderingContext2D, layer: TextLayer) {
 }
 
 /**
+ * Draw a video layer element to the canvas context.
+ * Canvas 2D drawImage() natively accepts HTMLVideoElement — draws the current frame.
+ */
+function drawVideoLayerToCtx(
+  ctx: CanvasRenderingContext2D,
+  layer: TextLayer,
+  videoElement: HTMLVideoElement
+) {
+  if (videoElement.readyState < 2) return; // Not enough data to draw
+
+  ctx.save();
+  ctx.globalAlpha = layer.opacity;
+
+  // Blend mode
+  if (layer.blendMode && layer.blendMode !== 'normal') {
+    const blendMap: Record<string, GlobalCompositeOperation> = {
+      'screen': 'screen', 'multiply': 'multiply', 'overlay': 'overlay',
+      'soft-light': 'soft-light', 'hard-light': 'hard-light',
+      'difference': 'difference', 'exclusion': 'exclusion',
+      'color-dodge': 'color-dodge', 'color-burn': 'color-burn',
+      'luminosity': 'luminosity', 'darken': 'darken', 'lighten': 'lighten',
+    };
+    const op = blendMap[layer.blendMode];
+    if (op) ctx.globalCompositeOperation = op;
+  }
+
+  const layerW = layer.width;
+  const layerH = layer.imageHeight || layer.width;
+  const centerX = layer.x + layerW / 2;
+  const centerY = layer.y + layerH / 2;
+
+  if (layer.rotation !== 0) {
+    ctx.translate(centerX, centerY);
+    ctx.rotate((layer.rotation * Math.PI) / 180);
+    ctx.translate(-centerX, -centerY);
+  }
+
+  // Per-layer filters
+  if (layer.imageFilters) {
+    const filterStr = buildFilterString(layer.imageFilters);
+    if (filterStr !== 'none') ctx.filter = filterStr;
+  }
+
+  // Draw video frame with appropriate fit
+  const fit = layer.imageFit || 'cover';
+  const vidW = videoElement.videoWidth;
+  const vidH = videoElement.videoHeight;
+
+  if (fit === 'cover' && vidW > 0 && vidH > 0) {
+    const vidRatio = vidW / vidH;
+    const layerRatio = layerW / layerH;
+    let srcX = 0, srcY = 0, srcW = vidW, srcH = vidH;
+    if (vidRatio > layerRatio) {
+      srcW = vidH * layerRatio;
+      srcX = (vidW - srcW) / 2;
+    } else {
+      srcH = vidW / layerRatio;
+      srcY = (vidH - srcH) / 2;
+    }
+    ctx.drawImage(videoElement, srcX, srcY, srcW, srcH, layer.x, layer.y, layerW, layerH);
+  } else if (fit === 'contain' && vidW > 0 && vidH > 0) {
+    const vidRatio = vidW / vidH;
+    const layerRatio = layerW / layerH;
+    let drawW = layerW, drawH = layerH;
+    if (vidRatio > layerRatio) drawH = layerW / vidRatio;
+    else drawW = layerH * vidRatio;
+    const drawX = layer.x + (layerW - drawW) / 2;
+    const drawY = layer.y + (layerH - drawH) / 2;
+    ctx.drawImage(videoElement, drawX, drawY, drawW, drawH);
+  } else {
+    ctx.drawImage(videoElement, layer.x, layer.y, layerW, layerH);
+  }
+
+  ctx.filter = 'none';
+
+  // Overlay
+  if (layer.imageFilters && layer.imageFilters.overlayOpacity > 0) {
+    ctx.globalAlpha = layer.opacity * layer.imageFilters.overlayOpacity;
+    ctx.fillStyle = layer.imageFilters.overlayColor;
+    ctx.fillRect(layer.x, layer.y, layerW, layerH);
+  }
+
+  ctx.restore();
+}
+
+/**
  * Synchronously render the editor state to an off-screen canvas.
  * Returns the canvas element for toDataURL() or toBlob().
- *
- * NOTE: If the background image uses CORS, it must have been loaded
- * with crossOrigin="anonymous" and served with correct CORS headers
- * for the export to succeed. If it fails, we fall back to rendering
- * without the image.
+ * Pass videoRefs to include video layer current frames.
  */
-export function exportToCanvas(state: EditorState): HTMLCanvasElement {
+export function exportToCanvas(
+  state: EditorState,
+  videoRefs?: Map<string, HTMLVideoElement>
+): HTMLCanvasElement {
   const { canvasWidth: w, canvasHeight: h } = state;
   const canvas = document.createElement('canvas');
   canvas.width = w;
@@ -406,6 +491,9 @@ export function exportToCanvas(state: EditorState): HTMLCanvasElement {
     if (!layer.visible) continue;
     if (layer.elementType === 'divider') {
       drawDividerToCtx(ctx, layer);
+    } else if (layer.elementType === 'video') {
+      const videoEl = videoRefs?.get(layer.id);
+      if (videoEl) drawVideoLayerToCtx(ctx, layer, videoEl);
     } else if (layer.elementType === 'image') {
       drawImageLayerToCtx(ctx, layer);
     } else {
@@ -418,8 +506,12 @@ export function exportToCanvas(state: EditorState): HTMLCanvasElement {
 
 /**
  * Async version that waits for background image to load.
+ * Pass videoRefs to include video layer current frames.
  */
-export async function exportToCanvasAsync(state: EditorState): Promise<HTMLCanvasElement> {
+export async function exportToCanvasAsync(
+  state: EditorState,
+  videoRefs?: Map<string, HTMLVideoElement>
+): Promise<HTMLCanvasElement> {
   const { canvasWidth: w, canvasHeight: h } = state;
   const canvas = document.createElement('canvas');
   canvas.width = w;
@@ -473,6 +565,9 @@ export async function exportToCanvasAsync(state: EditorState): Promise<HTMLCanva
     if (!layer.visible) continue;
     if (layer.elementType === 'divider') {
       drawDividerToCtx(ctx, layer);
+    } else if (layer.elementType === 'video') {
+      const videoEl = videoRefs?.get(layer.id);
+      if (videoEl) drawVideoLayerToCtx(ctx, layer, videoEl);
     } else if (layer.elementType === 'image') {
       drawImageLayerToCtx(ctx, layer);
     } else {

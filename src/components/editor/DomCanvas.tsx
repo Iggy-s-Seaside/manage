@@ -12,6 +12,8 @@ import { BackgroundLayer } from './BackgroundLayer';
 import { TextElement } from './TextElement';
 import { DividerElement } from './DividerElement';
 import { ImageElement } from './ImageElement';
+import { VideoElement } from './VideoElement';
+import { useVideoRefs } from '../../context/VideoRefContext';
 import { SelectionOverlay } from './SelectionOverlay';
 import { ZoomIndicator } from './ZoomIndicator';
 import { exportToCanvas } from './exportToCanvas';
@@ -30,6 +32,7 @@ interface DomCanvasProps {
 
 export interface DomCanvasHandle {
   exportImage: (format?: string, quality?: number) => string | null;
+  getVideoRefs: () => { getAll: () => Map<string, HTMLVideoElement>; seekAll: (time: number) => Promise<void>; hasVideos: () => boolean };
   getScale: () => number;
 }
 
@@ -46,6 +49,7 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
   const contentRef = useRef<HTMLDivElement>(null);
   const [fitScale, setFitScale] = useState(1);
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
+  const videoRefs = useVideoRefs();
 
   // Calculate fit scale on mount and resize
   useEffect(() => {
@@ -112,15 +116,16 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
   useImperativeHandle(ref, () => ({
     exportImage: (format?: string, quality?: number) => {
       try {
-        const canvas = exportToCanvas(state);
+        const canvas = exportToCanvas(state, videoRefs.getAll());
         const mimeType = format || 'image/png';
         return canvas.toDataURL(mimeType, quality ?? 0.92);
       } catch {
         return null;
       }
     },
+    getVideoRefs: () => videoRefs,
     getScale: () => gestures.currentZoom,
-  }), [state, gestures.currentZoom]);
+  }), [state, gestures.currentZoom, videoRefs]);
 
   // Report scale changes
   useEffect(() => {
@@ -193,6 +198,14 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
         {state.layers.map((layer) =>
           layer.elementType === 'divider' ? (
             <DividerElement
+              key={layer.id}
+              layer={layer}
+              isSelected={layer.id === state.selectedLayerId}
+              onPointerDown={interaction.handleElementPointerDown}
+              zoom={zoom}
+            />
+          ) : layer.elementType === 'video' ? (
+            <VideoElement
               key={layer.id}
               layer={layer}
               isSelected={layer.id === state.selectedLayerId}

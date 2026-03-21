@@ -74,7 +74,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const isImage = layer.elementType === 'image';
+  const isImage = layer.elementType === 'image' || layer.elementType === 'video';
   const isDivider = layer.elementType === 'divider';
   const isText = !isImage && !isDivider;
 
