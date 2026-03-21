@@ -232,11 +232,10 @@ export function useElementInteraction({
           if ('vibrate' in navigator) navigator.vibrate([5, 5, 5]);
         }
 
-        // Clamp to canvas bounds — keep at least 20% visible
+        // Clamp to canvas bounds — keep element fully within canvas
         const height = estimateHeight(layer);
-        const minVisible = 0.2;
-        finalX = Math.max(-layer.width * (1 - minVisible), Math.min(finalX, canvasWidth - layer.width * minVisible));
-        finalY = Math.max(-height * (1 - minVisible), Math.min(finalY, canvasHeight - height * minVisible));
+        finalX = Math.max(0, Math.min(finalX, canvasWidth - layer.width));
+        finalY = Math.max(0, Math.min(finalY, canvasHeight - height));
 
         // Direct DOM update — no React re-render
         const el = findLayerElement(contentRef, drag.id);
@@ -277,6 +276,12 @@ export function useElementInteraction({
         // Clamp to canvas bounds
         newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
 
+        // For images, also limit height to canvas bounds
+        let clampedImageHeight = newImageHeight;
+        if (drag.isImage) {
+          clampedImageHeight = Math.min(newImageHeight, canvasHeight);
+        }
+
         // Adjust position for left-side handles
         let newX: number;
         let newY = drag.startLayerY;
@@ -287,18 +292,22 @@ export function useElementInteraction({
         }
         // For top handles, adjust Y based on height change
         if (!isBottom) {
-          const newHeight = drag.isImage ? newImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
+          const newHeight = drag.isImage ? clampedImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
           newY = Math.round(drag.startLayerY + (drag.startHeight - newHeight));
         }
 
         newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
+
+        // Clamp Y to canvas bounds
+        const finalHeight = drag.isImage ? clampedImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
+        newY = Math.max(0, Math.min(newY, canvasHeight - finalHeight));
 
         // Direct DOM update for width + position + fontSize/height
         const el = findLayerElement(contentRef, drag.id);
         if (el) {
           el.style.width = `${newWidth}px`;
           if (drag.isImage) {
-            el.style.height = `${newImageHeight}px`;
+            el.style.height = `${clampedImageHeight}px`;
           } else {
             el.style.fontSize = `${newFontSize}px`;
           }
@@ -306,12 +315,11 @@ export function useElementInteraction({
         }
 
         // Sync selection overlay during resize
-        const newHeight = drag.isImage ? newImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
-        syncSelectionOverlay(contentRef, newX, newY, newWidth, newHeight, layer.rotation || 0);
+        syncSelectionOverlay(contentRef, newX, newY, newWidth, finalHeight, layer.rotation || 0);
 
         drag.currentWidth = newWidth;
         drag.currentFontSize = newFontSize;
-        drag.currentImageHeight = newImageHeight;
+        drag.currentImageHeight = drag.isImage ? clampedImageHeight : newImageHeight;
         drag.currentLayerX = newX;
         drag.currentLayerY = newY;
       }
@@ -449,6 +457,12 @@ export function useElementInteraction({
 
         newWidth = Math.max(50, Math.min(newWidth, canvasWidth));
 
+        // For images, also limit height to canvas bounds
+        let clampedImageHeight = newImageHeight;
+        if (drag.isImage) {
+          clampedImageHeight = Math.min(newImageHeight, canvasHeight);
+        }
+
         let newX: number;
         let newY = drag.startLayerY;
         if (isRight) {
@@ -457,17 +471,21 @@ export function useElementInteraction({
           newX = Math.round(drag.startLayerX + (drag.startWidth - newWidth));
         }
         if (!isBottom) {
-          const newHeight = drag.isImage ? newImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
+          const newHeight = drag.isImage ? clampedImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
           newY = Math.round(drag.startLayerY + (drag.startHeight - newHeight));
         }
 
         newX = Math.max(0, Math.min(newX, canvasWidth - newWidth));
 
+        // Clamp Y to canvas bounds
+        const finalHeight = drag.isImage ? clampedImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
+        newY = Math.max(0, Math.min(newY, canvasHeight - finalHeight));
+
         const el = findLayerElement(contentRef, drag.id);
         if (el) {
           el.style.width = `${newWidth}px`;
           if (drag.isImage) {
-            el.style.height = `${newImageHeight}px`;
+            el.style.height = `${clampedImageHeight}px`;
           } else {
             el.style.fontSize = `${newFontSize}px`;
           }
@@ -475,12 +493,11 @@ export function useElementInteraction({
         }
 
         // Sync selection overlay during resize
-        const newHeight = drag.isImage ? newImageHeight : estimateHeight({ ...layer, fontSize: newFontSize });
-        syncSelectionOverlay(contentRef, newX, newY, newWidth, newHeight, layer.rotation || 0);
+        syncSelectionOverlay(contentRef, newX, newY, newWidth, finalHeight, layer.rotation || 0);
 
         drag.currentWidth = newWidth;
         drag.currentFontSize = newFontSize;
-        drag.currentImageHeight = newImageHeight;
+        drag.currentImageHeight = drag.isImage ? clampedImageHeight : newImageHeight;
         drag.currentLayerX = newX;
         drag.currentLayerY = newY;
       }

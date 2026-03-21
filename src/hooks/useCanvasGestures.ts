@@ -174,6 +174,12 @@ export function useCanvasGestures({
     if (isAnimatingRef.current) return;
     if (isEditing) return; // Don't capture gestures in edit mode
 
+    // When an element is selected, skip all gesture handling.
+    // This prevents phantom pointer tracking when the user touches
+    // resize handles (whose stopPropagation fires after this handler).
+    // The user must deselect the element before panning/pinching.
+    if (hasSelectedElement) return;
+
     // Check for double-tap
     const now = Date.now();
     const dx = e.clientX - lastTapRef.current.x;
