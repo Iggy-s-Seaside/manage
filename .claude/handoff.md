@@ -48,27 +48,30 @@ Image-specific fields: `imageSrc`, `imageHeight`, `imageFilters`, `imageFit`, `b
 ## What's Been Built (Complete)
 1. **Text layers** — Full typography controls (font, size, B/I/U, alignment, color, shadow, stroke, letter spacing, line height)
 2. **Divider layers** — Horizontal lines with configurable label, color, thickness, opacity, gap, padding
-3. **Image layers** — Upload photos as layers with per-layer filters (brightness, contrast, saturation, blur) and color overlay
-4. **Blend modes** — 13 CSS blend modes (screen, multiply, overlay, soft-light, etc.) via MobileBlendPicker floating overlay
-5. **Background system** — Upload or pick from Supabase library, with global filters (MobileFilterBar) and gradient support
-6. **Canvas controls** — Size presets (1:1, 4:5, 9:16, 16:9), background color picker, auto-fit scaling
-7. **Selection handles** — Proportional resize from all 4 corners using diagonal projection math, rotation with 45° snapping
-8. **Layer management** — Reorder, duplicate, delete, lock, toggle visibility
-9. **Templates** — Built-in and user-saved templates
-10. **Export** — PNG/JPEG with quality control, renders all layer types including blend modes
-11. **Save** — Upload to Supabase as a "special" with title/description/type/price
-12. **Draft persistence** — Auto-save/restore with StrictMode double-fire guard
-13. **Overlay mutual exclusion** — Only one overlay/sheet open at a time
+3. **Image layers** — Upload photos OR pick from Supabase library (Add → From Library). Per-layer filters, blend modes, non-destructive crop (CSS inset)
+4. **Video layers** — Upload MP4/WebM as layers with autoplay/muted/loop, blend modes, per-layer filters, crop. Stored in IndexedDB for draft persistence.
+5. **Blend modes** — 13 CSS blend modes (screen, multiply, overlay, soft-light, etc.) via MobileBlendPicker floating overlay
+6. **Background system** — Upload or pick from Supabase library, with global filters (MobileFilterBar) and gradient support. **Convert to Layer** button turns background into a movable/resizable image layer.
+7. **Canvas controls** — Size presets (1:1, 4:5, 9:16, 16:9), background color picker, auto-fit scaling
+8. **Selection handles** — Proportional resize from all 4 corners using diagonal projection math, rotation with 45° snapping. Invisible touch target expanders guarantee 44px screen-space tap areas.
+9. **Layer management** — Reorder, duplicate, delete, lock, toggle visibility
+10. **Templates** — Built-in and user-saved templates
+11. **Export** — PNG/JPEG with quality control, **animated GIF** export (frame-by-frame with progress bar for video layers), renders all layer types including blend modes and crop
+12. **Save** — Upload to Supabase as a "special" with title/description/type/price
+13. **Draft persistence** — Auto-save/restore using IndexedDB for media (no localStorage bloat). StrictMode double-fire guard.
+14. **Overlay mutual exclusion** — Only one overlay/sheet open at a time
+15. **Triple-tap fit** — Triple-tap image/video layer to instantly resize and center to cover canvas
+16. **Fit to Canvas** — Button in More menu for selected image/video layers
+17. **Crop** — Non-destructive CSS inset() crop for image/video layers with sliders in Properties panel
 
 ## What Needs Work (Priority Order)
 
 ### P0 — User-reported issues
-- **Image resize handles UX** — User said handles feel unintuitive. The diagonal projection math was fixed (removed `projection * dirX` double-counting), but real-device touch testing is needed. Handles may need larger touch targets or visual feedback.
-- **Responsive layout** — User reported "a lot of issues of the spirit of the design and placement going all over the place when changing to different views." The editor is mobile-first but desktop layout (side panels) may need polish.
+- **Image resize handles UX** — Handles may need larger touch targets or visual feedback on real devices.
+- **Responsive layout** — Editor is mobile-first but desktop layout (side panels) may need polish.
 
 ### P1 — Feature gaps
-- **Enlight-style compositing workflow** — User wants double-exposure effects. Blend modes exist but the UX flow could be more guided (e.g., "tap to blend two photos" wizard)
-- **Image crop** — No way to crop image layers. Users can only use Fit (cover/contain/fill).
+- **Enlight-style compositing workflow** — Guided "tap to blend two photos" wizard for double-exposure effects
 - **Pinch-to-resize on elements** — Users expect Instagram-style two-finger resize on elements. Currently only corner handles work.
 - **Undo/Redo discoverability** — Buried in More menu. Could add shake-to-undo or visible buttons.
 - **Filter presets for image layers** — Background has presets (Moody, Vintage, etc.) but image layers only have manual sliders.
@@ -91,8 +94,11 @@ Image-specific fields: `imageSrc`, `imageHeight`, `imageFilters`, `imageFit`, `b
 ### Canvas & Rendering
 - `src/components/editor/DomCanvas.tsx` — Canvas viewport and layer rendering
 - `src/components/editor/SelectionOverlay.tsx` — Selection handles
-- `src/components/editor/ImageElement.tsx` — Image layer renderer
-- `src/components/editor/exportToCanvas.ts` — PNG/JPEG export
+- `src/components/editor/ImageElement.tsx` — Image layer renderer (with crop support)
+- `src/components/editor/VideoElement.tsx` — Video layer renderer (autoplay, muted, loop)
+- `src/components/editor/exportToCanvas.ts` — PNG/JPEG export (supports crop, video frames)
+- `src/components/editor/exportToGif.ts` — Animated GIF export (frame-by-frame)
+- `src/components/editor/ExportProgressModal.tsx` — GIF export progress UI
 
 ### Mobile UI
 - `src/components/editor/MobileToolbar.tsx` — Bottom toolbar with Add/More popovers
@@ -105,19 +111,22 @@ Image-specific fields: `imageSrc`, `imageHeight`, `imageFilters`, `imageFit`, `b
 ### Data & Backend
 - `src/hooks/useSupabaseCRUD.ts` — Generic Supabase table CRUD
 - `src/hooks/useImageUpload.ts` — Upload to Supabase storage
-- `src/hooks/useDraftPersistence.ts` — localStorage draft save/restore
+- `src/hooks/useDraftPersistence.ts` — IndexedDB + localStorage draft save/restore
+- `src/hooks/useMediaSync.ts` — Background Supabase media upload
+- `src/lib/mediaStore.ts` — IndexedDB media blob storage (idb:// refs)
+- `src/context/VideoRefContext.tsx` — Video element registry for export pipeline
 - `src/data/templates.ts` — Built-in template definitions
 
 ## Recent Git History
 ```
+65796eb Add background-to-layer conversion, library for image layers, crop, and triple-tap fit
+63aef3f Fix TypeScript build errors for Netlify deploy
+48ce1f0 Add video layer support, IndexedDB media storage, and GIF export
+ff702fb Improve mobile touch targets and element stagger spacing
+5b68956 Add handoff context file for session continuity
 7b7c402 Fix divider centering and overlay stacking conflicts
 2e2d54e Code cleanup: fix resize direction bug, remove dead code, fix stale closures
 40399d7 Add floating blend mode overlay for image layers
-fd98b81 Fix canvas displacement during resize and constrain elements to canvas bounds
-dd579c7 Add image layer support with per-layer filters and export
-4f5401d Redesign font picker as compact horizontal bar with smart positioning
-8861b01 Fix resize handles, selection overlay sync, and floating font picker
-f287476 Add proportional resize and floating filter bar for real-time preview
 ```
 
 ## How to Test
