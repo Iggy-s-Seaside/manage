@@ -60,10 +60,11 @@ export const VideoElement = memo<VideoElementProps>(({
     };
   }, [layer.videoSrc]);
 
-  // Register video ref for export pipeline
+  // Register video ref for export pipeline + set webkit-playsinline for older iOS
   useEffect(() => {
     const el = videoRef.current;
     if (el) {
+      el.setAttribute('webkit-playsinline', '');
       register(layer.id, el);
     }
     return () => {
@@ -127,8 +128,7 @@ export const VideoElement = memo<VideoElementProps>(({
         muted={layer.videoMuted !== false}
         loop={layer.videoLoop !== false}
         playsInline
-        // @ts-expect-error webkit-playsinline is non-standard but required for older iOS
-        webkit-playsinline=""
+        /* webkit-playsinline applied via ref for older iOS */
         poster={layer.videoPosterSrc}
         draggable={false}
         style={{

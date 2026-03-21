@@ -44,7 +44,7 @@ export async function exportToGif(
 ): Promise<Blob> {
   const {
     fps = 15,
-    quality = 10,
+    quality: _quality = 10,
     onProgress,
     abortSignal,
   } = options;
@@ -133,7 +133,7 @@ export async function exportToGif(
 
   // Convert to blob
   const bytes = gif.bytes();
-  return new Blob([bytes], { type: 'image/gif' });
+  return new Blob([new Uint8Array(bytes) as BlobPart], { type: 'image/gif' });
 }
 
 /**
