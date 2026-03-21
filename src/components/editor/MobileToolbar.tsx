@@ -2,7 +2,7 @@ import { useState, memo } from 'react';
 import {
   Plus, Image, Upload, Layers, SlidersHorizontal,
   Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate,
-  Square, RectangleVertical, RectangleHorizontal, Type as TypeIcon
+  Square, RectangleVertical, RectangleHorizontal, Type as TypeIcon, Blend
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 
@@ -24,6 +24,7 @@ interface MobileToolbarProps {
   onOpenLayers: () => void;
   onOpenProperties: () => void;
   onOpenFontPicker: () => void;
+  onOpenBlendPicker: () => void;
   onOpenAdjustments: () => void;
   onOpenTemplates: () => void;
   onUndo: () => void;
@@ -39,6 +40,7 @@ interface MobileToolbarProps {
   canRedo: boolean;
   uploading: boolean;
   hasSelection: boolean;
+  isImageSelected?: boolean;
   activeSheet?: string | null;
   gestureActive?: boolean;
 }
@@ -51,6 +53,7 @@ export const MobileToolbar = memo(function MobileToolbar({
   onOpenLayers,
   onOpenProperties,
   onOpenFontPicker,
+  onOpenBlendPicker,
   onOpenAdjustments,
   onOpenTemplates,
   onUndo,
@@ -66,6 +69,7 @@ export const MobileToolbar = memo(function MobileToolbar({
   canRedo,
   uploading: _uploading,
   hasSelection,
+  isImageSelected = false,
   activeSheet,
   gestureActive = false,
 }: MobileToolbarProps) {
@@ -177,11 +181,18 @@ export const MobileToolbar = memo(function MobileToolbar({
       <div className="flex items-center justify-around px-2 py-1.5 bg-surface/95 backdrop-blur-xl border-t border-border/30">
         <ToolButton icon={Plus} label="Add" onClick={() => setAddMenuOpen(!addMenuOpen)} active={addMenuOpen} />
         <ToolButton icon={Layers} label="Layers" onClick={onOpenLayers} highlighted={activeSheet === 'layers'} />
-        {hasSelection && (
+        {hasSelection && !isImageSelected && (
           <ToolButton
             icon={TypeIcon}
             label="Font"
             onClick={onOpenFontPicker}
+          />
+        )}
+        {hasSelection && isImageSelected && (
+          <ToolButton
+            icon={Blend}
+            label="Blend"
+            onClick={onOpenBlendPicker}
           />
         )}
         <ToolButton

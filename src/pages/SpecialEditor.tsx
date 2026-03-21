@@ -15,6 +15,7 @@ import { ImageAdjustments } from '../components/editor/ImageAdjustments';
 import { MobileToolbar } from '../components/editor/MobileToolbar';
 import { MobileFilterBar } from '../components/editor/MobileFilterBar';
 import { MobileFontPicker } from '../components/editor/MobileFontPicker';
+import { MobileBlendPicker } from '../components/editor/MobileBlendPicker';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { Modal, ConfirmDialog } from '../components/ui/Modal';
 import { useEditorState } from '../hooks/useEditorState';
@@ -74,6 +75,7 @@ export function SpecialEditor() {
   const [isGesturing, setIsGesturing] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [mobileFontPickerOpen, setMobileFontPickerOpen] = useState(false);
+  const [mobileBlendPickerOpen, setMobileBlendPickerOpen] = useState(false);
   const [customSizeOpen, setCustomSizeOpen] = useState(false);
   const [customWidth, setCustomWidth] = useState(1080);
   const [customHeight, setCustomHeight] = useState(1080);
@@ -829,7 +831,8 @@ export function SpecialEditor() {
         onUpload={() => bgInputRef.current?.click()}
         onOpenLayers={() => setMobileSheet('layers')}
         onOpenProperties={() => setMobileSheet('properties')}
-        onOpenFontPicker={() => { setMobileFontPickerOpen(true); setMobileSheet(null); }}
+        onOpenFontPicker={() => { setMobileFontPickerOpen(true); setMobileBlendPickerOpen(false); setMobileSheet(null); }}
+        onOpenBlendPicker={() => { setMobileBlendPickerOpen(true); setMobileFontPickerOpen(false); setMobileSheet(null); }}
         onOpenAdjustments={() => { setMobileFiltersOpen(true); setMobileSheet(null); }}
         onOpenTemplates={() => setMobileSheet('templates')}
         onUndo={() => dispatch({ type: 'UNDO' })}
@@ -845,6 +848,7 @@ export function SpecialEditor() {
         canRedo={canRedo}
         uploading={uploading}
         hasSelection={!!selectedLayer}
+        isImageSelected={selectedLayer?.elementType === 'image'}
         activeSheet={mobileSheet}
         gestureActive={isGesturing}
       />
@@ -905,6 +909,23 @@ export function SpecialEditor() {
           onClose={() => setMobileFontPickerOpen(false)}
           elementScreenY={(() => {
             // Calculate where the selected element is on screen (0=top, 1=bottom)
+            const canvasEl = document.querySelector('[data-layer-id="' + selectedLayer.id + '"]');
+            if (canvasEl) {
+              const rect = canvasEl.getBoundingClientRect();
+              return (rect.top + rect.height / 2) / window.innerHeight;
+            }
+            return 0.5;
+          })()}
+        />
+      )}
+
+      {/* Mobile floating blend picker — overlays canvas for real-time preview */}
+      {mobileBlendPickerOpen && selectedLayer && selectedLayer.elementType === 'image' && (
+        <MobileBlendPicker
+          layer={selectedLayer}
+          onUpdate={(changes) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, changes })}
+          onClose={() => setMobileBlendPickerOpen(false)}
+          elementScreenY={(() => {
             const canvasEl = document.querySelector('[data-layer-id="' + selectedLayer.id + '"]');
             if (canvasEl) {
               const rect = canvasEl.getBoundingClientRect();
