@@ -411,27 +411,3 @@ function SheetActionButton({
   );
 }
 
-function PopoverButton({
-  icon: Icon,
-  label,
-  onClick,
-  disabled,
-}: {
-  icon: typeof Plus;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex items-center gap-3 w-full px-3 py-3 text-sm rounded-xl transition-all active:scale-[0.98] ${
-        disabled ? 'text-text-muted opacity-40' : 'text-text-secondary hover:bg-surface-hover'
-      }`}
-    >
-      <Icon size={16} />
-      {label}
-    </button>
-  );
-}
