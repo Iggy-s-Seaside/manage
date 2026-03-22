@@ -2,6 +2,15 @@ import { useReducer, useCallback } from 'react';
 import type { EditorState, TextLayer, ImageFilters } from '../types';
 import { DEFAULT_IMAGE_FILTERS } from '../types';
 
+/** Estimate text element height accounting for line wrapping.
+ *  Uses character-width approximation — not pixel-accurate, but good enough for stacking placement. */
+function estimateTextHeight(text: string, size: number, width: number, lineH: number = 1.3): number {
+  // ~0.55 is a reasonable avg char width ratio for bold/uppercase display fonts (Oswald, Bebas)
+  const charsPerLine = Math.max(1, Math.floor(width / (size * 0.55)));
+  const numLines = Math.max(1, Math.ceil(text.length / charsPerLine));
+  return Math.round(size * lineH * numLines);
+}
+
 interface HistoryState {
   past: EditorState[];
   present: EditorState;
@@ -166,8 +175,10 @@ export function useEditorState() {
     // Determine final width/height first so we can center properly
     const finalWidth = overrides?.width ?? 300;
     const fontSize = overrides?.fontSize ?? 48;
-    // Estimate element height based on type
-    const estimatedHeight = overrides?.imageHeight ?? Math.round(fontSize * 1.3);
+
+    const text = overrides?.text || 'New Text';
+    const lineHeight = overrides?.lineHeight ?? 1.3;
+    const estimatedHeight = overrides?.imageHeight ?? estimateTextHeight(text, fontSize, finalWidth, lineHeight);
 
     // Use explicit position from overrides if provided (e.g., image layers)
     let baseX = overrides?.x ?? Math.round((state.canvasWidth - finalWidth) / 2);
@@ -181,7 +192,7 @@ export function useEditorState() {
     } else {
       // Stack below the lowest existing element
       const maxY = Math.max(...state.layers.map(l => {
-        const lHeight = l.imageHeight ?? Math.round((l.fontSize ?? 48) * 1.3);
+        const lHeight = l.imageHeight ?? estimateTextHeight(l.text || '', l.fontSize ?? 48, l.width ?? 300, l.lineHeight ?? 1.3);
         return l.y + lHeight;
       }), 0);
       baseY = maxY + 40;

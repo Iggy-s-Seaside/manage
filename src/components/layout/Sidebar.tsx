@@ -85,7 +85,7 @@ export function Sidebar() {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center gap-3 px-4 py-3 bg-surface border-b border-border">
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-1.5 rounded-lg hover:bg-surface-hover"
+          className="p-2.5 -ml-1 rounded-lg hover:bg-surface-hover min-w-[44px] min-h-[44px] flex items-center justify-center"
         >
           <Menu size={20} />
         </button>

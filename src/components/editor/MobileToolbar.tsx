@@ -3,9 +3,10 @@ import {
   Plus, Image, Upload, Layers, SlidersHorizontal,
   Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate,
   Square, RectangleVertical, RectangleHorizontal, Type as TypeIcon, Blend,
-  FolderOpen, Maximize, ArrowDownToLine, AlignHorizontalJustifyCenter, AlignVerticalJustifyCenter
+  FolderOpen, Maximize, ArrowDownToLine, AlignHorizontalJustifyCenter, AlignVerticalJustifyCenter, Copy
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
+import { GradientPicker } from './GradientPicker';
 
 // Same presets as SpecialEditor
 const TEXT_PRESETS = [
@@ -40,6 +41,9 @@ interface MobileToolbarProps {
   onExport: () => void;
   onSetCanvasSize?: (width: number, height: number) => void;
   onSetBgColor?: (color: string) => void;
+  onSetGradient?: (gradient: string | undefined) => void;
+  currentGradient?: string;
+  onDuplicate?: () => void;
   canvasWidth?: number;
   canvasHeight?: number;
   bgColor?: string;
@@ -75,6 +79,9 @@ export const MobileToolbar = memo(function MobileToolbar({
   onExport,
   onSetCanvasSize,
   onSetBgColor,
+  onSetGradient,
+  currentGradient,
+  onDuplicate,
   canvasWidth = 1080,
   canvasHeight = 1080,
   bgColor = '#0a0f0f',
@@ -146,7 +153,7 @@ export const MobileToolbar = memo(function MobileToolbar({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
           <div
-            className="absolute bottom-full right-3 mb-2 z-50 bg-surface/95 backdrop-blur-xl border border-border/30 rounded-2xl shadow-modal p-1.5 min-w-[180px]"
+            className="absolute bottom-full right-3 mb-2 z-50 bg-surface/95 backdrop-blur-xl border border-border/30 rounded-2xl shadow-modal p-1.5 min-w-[180px] max-h-[70vh] overflow-y-auto scrollbar-hide"
             style={{ animation: 'popUp 200ms cubic-bezier(0.32, 0.72, 0, 1)' }}
           >
             <PopoverButton icon={LayoutTemplate} label="Templates" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
@@ -164,6 +171,9 @@ export const MobileToolbar = memo(function MobileToolbar({
                 <PopoverButton icon={AlignHorizontalJustifyCenter} label="Center H" onClick={() => { onAlignCenterH(); setMoreOpen(false); }} />
                 <PopoverButton icon={AlignVerticalJustifyCenter} label="Center V" onClick={() => { onAlignCenterV?.(); setMoreOpen(false); }} />
               </>
+            )}
+            {hasSelection && onDuplicate && (
+              <PopoverButton icon={Copy} label="Duplicate" onClick={() => { onDuplicate(); setMoreOpen(false); }} />
             )}
             <div className="h-px bg-border/40 my-1 mx-2" />
             {/* Canvas size shortcuts */}
@@ -200,6 +210,15 @@ export const MobileToolbar = memo(function MobileToolbar({
                   value={bgColor}
                   onChange={(e) => onSetBgColor(e.target.value)}
                   className="w-11 h-11 rounded-lg cursor-pointer border border-border"
+                />
+              </div>
+            )}
+            {/* Gradient picker */}
+            {onSetGradient && (
+              <div className="px-3 py-2">
+                <GradientPicker
+                  currentGradient={currentGradient}
+                  onSelect={onSetGradient}
                 />
               </div>
             )}

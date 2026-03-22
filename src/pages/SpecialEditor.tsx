@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Undo2, Redo2, Download, Save, Upload, RectangleVertical, RectangleHorizontal, Square,
   Loader2, Image, Sliders, Type, Heading1, Heading2, Tag, Megaphone, ZoomIn, ZoomOut, Maximize,
-  LayoutTemplate, Ruler, Minus
+  LayoutTemplate, Ruler, Minus, Sparkles, Copy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DomCanvas, type DomCanvasHandle } from '../components/editor/DomCanvas';
@@ -34,6 +34,8 @@ import { storeMedia, generateMediaId, makeIdbRef } from '../lib/mediaStore';
 import { useMediaSync } from '../hooks/useMediaSync';
 import { exportToGif } from '../components/editor/exportToGif';
 import { ExportProgressModal } from '../components/editor/ExportProgressModal';
+import { GradientPicker } from '../components/editor/GradientPicker';
+import { findContrastIssues } from '../utils/colorContrast';
 
 // Text presets for quick add
 const TEXT_PRESETS = [
@@ -73,6 +75,7 @@ export function SpecialEditor() {
   const [mobileSheet, setMobileSheet] = useState<MobileSheet>(null);
   const [zoom, setZoom] = useState<number | undefined>(undefined); // undefined = auto-fit
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [gradientPickerOpen, setGradientPickerOpen] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -164,9 +167,15 @@ export function SpecialEditor() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [hasUnsavedChanges]);
 
-  // Mark unsaved changes
+  // Mark unsaved changes only after user interaction (not template/draft load)
+  const initialStateRef = useRef<string | null>(null);
   useEffect(() => {
-    if (state.layers.length > 0 || state.backgroundImage) {
+    if (state.layers.length === 0 && !state.backgroundImage) return;
+    const snapshot = JSON.stringify({ layers: state.layers, bg: state.backgroundImage, bgColor: state.backgroundColor, grad: state.backgroundGradient });
+    if (initialStateRef.current === null) {
+      // First meaningful state — save as baseline (template or draft load)
+      initialStateRef.current = snapshot;
+    } else if (snapshot !== initialStateRef.current) {
       setHasUnsavedChanges(true);
     }
   }, [state]);
@@ -604,6 +613,41 @@ export function SpecialEditor() {
     }
   }, [hasUnsavedChanges, navigate]);
 
+  // Apply gradient and check text contrast
+  const handleGradientSelect = useCallback((gradient: string | undefined) => {
+    dispatch({ type: 'SET_BACKGROUND_GRADIENT', gradient });
+    if (!gradient) return;
+
+    const issues = findContrastIssues(
+      gradient,
+      state.layers.map((l) => ({ id: l.id, y: l.y, fill: l.fill, elementType: l.elementType })),
+      state.canvasHeight,
+    );
+
+    if (issues.length > 0) {
+      toast(
+        (t) => (
+          <div className="flex items-center gap-3">
+            <span className="text-sm">{issues.length} text layer{issues.length > 1 ? 's' : ''} may be hard to read</span>
+            <button
+              onClick={() => {
+                issues.forEach((issue) => {
+                  dispatch({ type: 'UPDATE_LAYER', id: issue.layerId, changes: { fill: issue.suggestedColor } });
+                });
+                toast.dismiss(t.id);
+                toast.success('Text colors updated');
+              }}
+              className="shrink-0 px-2.5 py-1 rounded-md bg-primary text-white text-xs font-medium"
+            >
+              Auto-fix
+            </button>
+          </div>
+        ),
+        { duration: 6000 },
+      );
+    }
+  }, [dispatch, state.layers, state.canvasHeight]);
+
   // Load a template into the editor
   const loadTemplate = useCallback((templateId: string) => {
     const template = TEMPLATES.find((t) => t.id === templateId);
@@ -988,7 +1032,7 @@ export function SpecialEditor() {
 
         <div className="flex-1" />
 
-        {/* Background color */}
+        {/* Background color + gradient */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-text-muted">BG:</span>
           <input
@@ -997,6 +1041,27 @@ export function SpecialEditor() {
             onChange={(e) => dispatch({ type: 'SET_BACKGROUND_COLOR', color: e.target.value })}
             className="w-8 h-8 rounded cursor-pointer border border-border"
           />
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setGradientPickerOpen(!gradientPickerOpen)}
+            className={`btn-ghost text-xs py-1.5 px-2 ${state.backgroundGradient ? 'text-primary' : ''}`}
+            style={state.backgroundGradient ? { borderBottom: '2px solid #2dd4bf' } : undefined}
+          >
+            Gradient
+          </button>
+          {gradientPickerOpen && createPortal(
+            <div
+              className="fixed z-[999] bg-surface border border-border rounded-xl shadow-modal p-3 w-[340px] animate-fade-in"
+              style={{ top: 52, right: 120 }}
+            >
+              <GradientPicker
+                currentGradient={state.backgroundGradient}
+                onSelect={handleGradientSelect}
+              />
+            </div>,
+            document.body,
+          )}
         </div>
 
         <div className="w-px h-6 bg-border" />
@@ -1044,7 +1109,7 @@ export function SpecialEditor() {
         </div>
 
         {/* Canvas Area — DOM-based canvas with gesture handling */}
-        <div className="flex-1 bg-black/40 md:bg-surface-active overflow-hidden">
+        <div className="flex-1 bg-black/40 md:bg-surface-active overflow-hidden relative">
           <DomCanvas
             ref={canvasRef}
             state={state}
@@ -1059,6 +1124,23 @@ export function SpecialEditor() {
             }}
             onTripleTap={handleFitLayerToCanvas}
           />
+
+          {/* Empty canvas onboarding */}
+          {state.layers.length === 0 && !state.backgroundImage && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+              <div className="text-center pointer-events-auto">
+                <Sparkles size={36} className="mx-auto text-text-muted mb-3" />
+                <p className="text-sm text-text-secondary font-medium mb-1">Ready to create?</p>
+                <button
+                  onClick={() => setTemplatePickerOpen(true)}
+                  className="btn-primary text-sm mt-3"
+                >
+                  <LayoutTemplate size={16} /> Start from a template
+                </button>
+                <p className="text-xs text-text-muted mt-3">or use the toolbar to start blank</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Panel - Properties / Adjustments (desktop only, narrower at md, wider at lg) */}
@@ -1145,6 +1227,9 @@ export function SpecialEditor() {
         onExport={() => setExportModalOpen(true)}
         onSetCanvasSize={(w, h) => dispatch({ type: 'SET_CANVAS_SIZE', width: w, height: h })}
         onSetBgColor={(color) => dispatch({ type: 'SET_BACKGROUND_COLOR', color })}
+        onSetGradient={handleGradientSelect}
+        currentGradient={state.backgroundGradient}
+        onDuplicate={selectedLayer ? () => handleDuplicate(selectedLayer) : undefined}
         canvasWidth={state.canvasWidth}
         canvasHeight={state.canvasHeight}
         bgColor={state.backgroundColor}

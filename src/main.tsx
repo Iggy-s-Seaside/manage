@@ -14,7 +14,8 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <App />
           <Toaster
-            position="top-right"
+            position="bottom-center"
+            containerStyle={{ bottom: 80 }}
             toastOptions={{
               duration: 3000,
               className: '!bg-surface !text-text-primary !border !border-border !shadow-card',

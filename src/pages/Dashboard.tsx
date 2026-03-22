@@ -40,21 +40,29 @@ export function Dashboard() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
-          <p className="text-sm text-text-muted mt-1">Welcome back to Iggy's Manager</p>
+          <p className="text-sm text-text-muted mt-1">
+            {(() => {
+              const h = new Date().getHours();
+              const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+              return unreadMessages.length > 0
+                ? `${greeting} — ${unreadMessages.length} unread message${unreadMessages.length === 1 ? '' : 's'}`
+                : `${greeting}`;
+            })()}
+          </p>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {stats.map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="card p-5">
-            <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-lg ${bg}`}>
-                <Icon size={20} className={color} />
+          <div key={label} className="card p-3 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <div className={`p-2 sm:p-2.5 rounded-lg ${bg} w-fit`}>
+                <Icon size={18} className={color} />
               </div>
               <div>
-                <p className="text-2xl font-bold text-text-primary">{value}</p>
-                <p className="text-xs text-text-muted">{label}</p>
+                <p className="text-xl sm:text-2xl font-bold text-text-primary">{value}</p>
+                <p className="text-[11px] sm:text-xs text-text-muted leading-tight">{label}</p>
               </div>
             </div>
           </div>
@@ -63,40 +71,40 @@ export function Dashboard() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <Link to="/events/new" className="card-hover p-5 flex items-center gap-3 group">
+        <Link to="/events/new" className="card-hover p-5 flex items-center gap-3 group active:scale-[0.98] transition-transform">
           <div className="p-2 rounded-lg bg-primary-50 group-hover:bg-primary/20 transition-colors">
             <Plus size={18} className="text-primary" />
           </div>
           <div>
             <p className="text-sm font-medium text-text-primary">New Event</p>
-            <p className="text-xs text-text-muted">Create an event</p>
+            <p className="text-xs text-text-muted hidden sm:block">Create an event</p>
           </div>
         </Link>
-        <Link to="/specials/editor" className="card-hover p-5 flex items-center gap-3 group">
+        <Link to="/specials/editor" className="card-hover p-5 flex items-center gap-3 group active:scale-[0.98] transition-transform">
           <div className="p-2 rounded-lg bg-warning-light group-hover:bg-accent/20 transition-colors">
             <Sparkles size={18} className="text-accent" />
           </div>
           <div>
             <p className="text-sm font-medium text-text-primary">New Special</p>
-            <p className="text-xs text-text-muted">Design a special</p>
+            <p className="text-xs text-text-muted hidden sm:block">Design a special</p>
           </div>
         </Link>
-        <button onClick={() => setQuickPostOpen(true)} className="card-hover p-5 flex items-center gap-3 group text-left">
+        <button onClick={() => setQuickPostOpen(true)} className="card-hover p-5 flex items-center gap-3 group text-left active:scale-[0.98] transition-transform">
           <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-500/10 group-hover:bg-purple-100 dark:group-hover:bg-purple-500/20 transition-colors">
             <Camera size={18} className="text-purple-600 dark:text-purple-400" />
           </div>
           <div>
             <p className="text-sm font-medium text-text-primary">Quick Post</p>
-            <p className="text-xs text-text-muted">Photo → Post</p>
+            <p className="text-xs text-text-muted hidden sm:block">Photo → Post</p>
           </div>
         </button>
-        <Link to="/menu" className="card-hover p-5 flex items-center gap-3 group">
+        <Link to="/menu" className="card-hover p-5 flex items-center gap-3 group active:scale-[0.98] transition-transform">
           <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-500/10 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20 transition-colors">
             <UtensilsCrossed size={18} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <p className="text-sm font-medium text-text-primary">Edit Menu</p>
-            <p className="text-xs text-text-muted">Update menu items</p>
+            <p className="text-xs text-text-muted hidden sm:block">Update menu items</p>
           </div>
         </Link>
       </div>

@@ -23,6 +23,7 @@ export function MediaLibraryPage() {
   const [tab, setTab] = useState<TabKey>('all');
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<MediaItem | null>(null);
+  const [activeCard, setActiveCard] = useState<string | null>(null);
 
   const filtered = items.filter((item) => {
     if (tab !== 'all') {
@@ -58,9 +59,17 @@ export function MediaLibraryPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const formatFilename = (name: string) => {
+    // Strip leading timestamp prefix (e.g. "1773961532357-") and decode
+    const stripped = name.replace(/^\d{10,}-/, '');
+    // Remove file extension for display
+    const noExt = stripped.replace(/\.\w+$/, '');
+    return decodeURIComponent(noExt) || name;
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Media Library</h1>
           <p className="text-sm text-text-muted mt-1">{items.length} images</p>
@@ -108,8 +117,16 @@ export function MediaLibraryPage() {
 
       {/* Grid */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={32} className="animate-spin text-primary" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="card overflow-hidden animate-pulse">
+              <div className="aspect-square bg-surface-hover" />
+              <div className="px-3 py-2">
+                <div className="h-3 bg-surface-hover rounded w-2/3 mb-1.5" />
+                <div className="h-2.5 bg-surface-hover rounded w-1/3" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="card p-12 text-center">
@@ -117,15 +134,21 @@ export function MediaLibraryPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {filtered.map((item) => (
-            <div key={`${item.folder}/${item.name}`} className="group card-hover overflow-hidden">
-              <div className="aspect-square bg-surface-hover relative">
-                <img src={item.url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+          {filtered.map((item) => {
+            const cardKey = `${item.folder}/${item.name}`;
+            const isActive = activeCard === cardKey;
+            return (
+            <div key={cardKey} className="group card-hover overflow-hidden">
+              <div
+                className="aspect-square bg-surface-hover relative"
+                onClick={() => setActiveCard(isActive ? null : cardKey)}
+              >
+                <img src={item.url} alt={formatFilename(item.name)} className="w-full h-full object-cover" loading="lazy" />
+                <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 ${isActive ? '!bg-black/40 !opacity-100' : ''}`}>
                   <button
-                    onClick={() => copyUrl(item.url)}
+                    onClick={(e) => { e.stopPropagation(); copyUrl(item.url); }}
                     className="p-2 rounded-lg bg-black/60 text-white hover:bg-primary transition-colors"
-                    title="Copy URL"
+                    aria-label="Copy URL"
                   >
                     <Copy size={14} />
                   </button>
@@ -133,29 +156,31 @@ export function MediaLibraryPage() {
                     href={item.url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="p-2 rounded-lg bg-black/60 text-white hover:bg-primary transition-colors"
-                    title="Open in new tab"
+                    aria-label="Open in new tab"
                   >
                     <ExternalLink size={14} />
                   </a>
                   <button
-                    onClick={() => setDeleteTarget(item)}
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}
                     className="p-2 rounded-lg bg-black/60 text-white hover:bg-danger transition-colors"
-                    title="Delete"
+                    aria-label="Delete"
                   >
                     <Trash2 size={14} />
                   </button>
                 </div>
               </div>
               <div className="px-3 py-2">
-                <p className="text-xs text-text-primary truncate">{item.name}</p>
+                <p className="text-xs text-text-primary truncate" title={item.name}>{formatFilename(item.name)}</p>
                 <div className="flex items-center justify-between mt-0.5">
                   <span className="text-[10px] text-text-muted">{item.folder || 'root'}</span>
                   <span className="text-[10px] text-text-muted">{formatSize(item.size)}</span>
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

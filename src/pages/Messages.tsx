@@ -206,7 +206,7 @@ export function Messages() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex gap-1 overflow-x-auto">
+            <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
               {(['all', 'unread', 'read', 'replied', 'archived'] as StatusFilter[]).map((f) => (
                 <button
                   key={f}
@@ -226,8 +226,17 @@ export function Messages() {
           {/* List */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 size={24} className="animate-spin text-primary" />
+              <div className="divide-y divide-border">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="px-3 py-3.5 animate-pulse">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="h-4 bg-surface-hover rounded w-24" />
+                      <div className="h-3 bg-surface-hover rounded w-16" />
+                    </div>
+                    <div className="h-3 bg-surface-hover rounded w-20 mb-1.5" />
+                    <div className="h-3 bg-surface-hover rounded w-3/4" />
+                  </div>
+                ))}
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-12">

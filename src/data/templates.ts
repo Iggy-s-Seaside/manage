@@ -154,6 +154,77 @@ export const TEMPLATES: SpecialTemplate[] = [
     ],
   },
 
+  // ── Sunset Sessions (1080×1350) ──
+  {
+    id: 'sunset-sessions',
+    name: 'Sunset Sessions',
+    category: 'drink',
+    backgroundColor: '#0a0e1a',
+    backgroundGradient: 'linear-gradient(180deg, #0a0e1a 0%, #1a1030 15%, #3d1a3a 30%, #7a2e3a 45%, #c4582a 58%, #e8923a 70%, #f5b84a 80%, #0a0e1a 100%)',
+    canvasWidth: 1080,
+    canvasHeight: 1350,
+    defaultLayers: [
+      { ...baseLayer, text: 'SUNSET', x: 0, y: 70, width: 1080, fontFamily: 'Bebas Neue', fontSize: 96, fontWeight: 400, fill: '#f5b84a', letterSpacing: 6, lineHeight: 1.0, textTransform: 'uppercase', shadowBlur: 12, shadowColor: 'rgba(245,184,74,0.3)' },
+      { ...baseLayer, text: 'SESSIONS', x: 0, y: 170, width: 1080, fontFamily: 'Bebas Neue', fontSize: 52, fontWeight: 400, fill: 'rgba(255,255,255,0.85)', letterSpacing: 10, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'GOLDEN HOUR ON THE COAST', x: 0, y: 240, width: 1080, fontFamily: 'Playfair Display', fontSize: 16, fontWeight: 400, fill: 'rgba(245,184,74,0.6)', letterSpacing: 3, lineHeight: 1.5, textTransform: 'uppercase', fontStyle: 'italic' },
+      { ...baseLayer, text: 'DAILY · 5PM - 7PM', x: 0, y: 280, width: 1080, fontFamily: 'Montserrat', fontSize: 13, fontWeight: 500, fill: 'rgba(255,255,255,0.45)', letterSpacing: 4, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, elementType: 'divider', text: 'COCKTAILS', dividerLabel: 'COCKTAILS', x: 0, y: 345, width: 1080, fontFamily: 'Montserrat', fontSize: 16, fontWeight: 600, fill: '#f5b84a', letterSpacing: 4, dividerLineColor: '#f5b84a', dividerLineOpacity: 0.25, dividerLineThickness: 1, dividerPadding: 60, dividerGap: 16 },
+      { ...baseLayer, text: 'PACIFIC SUNSET', x: 0, y: 400, width: 1080, fontFamily: 'Oswald', fontSize: 30, fontWeight: 500, fill: '#ffffff', letterSpacing: 1, lineHeight: 1.2, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Tequila · Blood orange · Lime · Tajin rim', x: 100, y: 440, width: 880, fontFamily: 'Inter', fontSize: 13, fontWeight: 400, fill: 'rgba(255,255,255,0.45)', letterSpacing: 0.5, lineHeight: 1.5, textTransform: 'none' },
+      { ...baseLayer, text: '$12', x: 0, y: 480, width: 1080, fontFamily: 'Bebas Neue', fontSize: 40, fontWeight: 400, fill: '#f5b84a', letterSpacing: 0, lineHeight: 1.0 },
+      { ...baseLayer, text: 'COASTAL MULE', x: 0, y: 540, width: 1080, fontFamily: 'Oswald', fontSize: 30, fontWeight: 500, fill: '#ffffff', letterSpacing: 1, lineHeight: 1.2, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Vodka · Ginger beer · Fresh lime · Mint', x: 100, y: 580, width: 880, fontFamily: 'Inter', fontSize: 13, fontWeight: 400, fill: 'rgba(255,255,255,0.45)', letterSpacing: 0.5, lineHeight: 1.5, textTransform: 'none' },
+      { ...baseLayer, text: '$10', x: 0, y: 620, width: 1080, fontFamily: 'Bebas Neue', fontSize: 40, fontWeight: 400, fill: '#f5b84a', letterSpacing: 0, lineHeight: 1.0 },
+      { ...baseLayer, elementType: 'divider', text: 'BITES', dividerLabel: 'BITES', x: 0, y: 690, width: 1080, fontFamily: 'Montserrat', fontSize: 14, fontWeight: 600, fill: 'rgba(255,255,255,0.35)', letterSpacing: 4, dividerLineColor: 'rgba(255,255,255,0.12)', dividerLineOpacity: 1, dividerLineThickness: 1, dividerPadding: 100, dividerGap: 16 },
+      { ...baseLayer, text: 'POKE BOWL · $14', x: 0, y: 740, width: 1080, fontFamily: 'Oswald', fontSize: 22, fontWeight: 500, fill: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'COCONUT SHRIMP · $12', x: 0, y: 778, width: 1080, fontFamily: 'Oswald', fontSize: 22, fontWeight: 500, fill: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'SEASIDE NACHOS · $10', x: 0, y: 816, width: 1080, fontFamily: 'Oswald', fontSize: 22, fontWeight: 500, fill: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'CATCH THE GOLDEN HOUR', x: 0, y: 900, width: 1080, fontFamily: 'Inter', fontSize: 11, fontWeight: 600, fill: 'rgba(245,184,74,0.4)', letterSpacing: 3, textTransform: 'uppercase' },
+      { ...baseLayer, text: '200 S FRANKLIN ST · SEASIDE, OR', x: 0, y: 1220, width: 1080, fontFamily: 'Inter', fontSize: 11, fontWeight: 400, fill: 'rgba(255,255,255,0.25)', letterSpacing: 2, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Iggys', x: 0, y: 1260, width: 1080, fontFamily: 'Pacifico', fontSize: 48, fontWeight: 400, fill: '#f5b84a', lineHeight: 1.0, textTransform: 'none' },
+    ],
+  },
+
+  // ── Spring Break at Iggy's (1080×1350) ──
+  {
+    id: 'spring-break',
+    name: 'Spring Break',
+    category: 'seasonal',
+    backgroundColor: '#060d1a',
+    backgroundGradient: 'linear-gradient(180deg, #060d1a 0%, #0a2040 20%, #103060 35%, #1a5070 48%, #2dd4bf 52%, #1a5070 56%, #103060 65%, #0a2040 80%, #060d1a 100%)',
+    canvasWidth: 1080,
+    canvasHeight: 1350,
+    defaultLayers: [
+      // Atmospheric top — small subtle text
+      { ...baseLayer, text: 'MARCH 22 - APRIL 6', x: 0, y: 50, width: 1080, fontFamily: 'Montserrat', fontSize: 12, fontWeight: 500, fill: 'rgba(45,212,191,0.5)', letterSpacing: 6, lineHeight: 1.5, textTransform: 'uppercase' },
+      // Main title — stacked for impact
+      { ...baseLayer, text: 'SPRING', x: 0, y: 100, width: 1080, fontFamily: 'Bebas Neue', fontSize: 120, fontWeight: 400, fill: '#ffffff', letterSpacing: 8, lineHeight: 1.0, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'BREAK', x: 0, y: 225, width: 1080, fontFamily: 'Bebas Neue', fontSize: 120, fontWeight: 400, fill: '#2dd4bf', letterSpacing: 8, lineHeight: 1.0, textTransform: 'uppercase', shadowBlur: 20, shadowColor: 'rgba(45,212,191,0.4)' },
+      // Tagline
+      { ...baseLayer, text: 'TWO WEEKS OF DEALS ON THE COAST', x: 0, y: 360, width: 1080, fontFamily: 'Playfair Display', fontSize: 16, fontWeight: 400, fill: 'rgba(255,255,255,0.5)', letterSpacing: 3, lineHeight: 1.5, textTransform: 'uppercase', fontStyle: 'italic' },
+      // Drink section
+      { ...baseLayer, elementType: 'divider', text: 'DAILY SPECIALS', dividerLabel: 'DAILY SPECIALS', x: 0, y: 430, width: 1080, fontFamily: 'Montserrat', fontSize: 14, fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.2, dividerLineThickness: 1, dividerPadding: 60, dividerGap: 16 },
+      // Featured drink 1
+      { ...baseLayer, text: 'SEASIDE SLUSHIE', x: 0, y: 490, width: 1080, fontFamily: 'Oswald', fontSize: 32, fontWeight: 500, fill: '#ffffff', letterSpacing: 1, lineHeight: 1.2, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Frozen mango margarita · Tajin rim · Lime', x: 100, y: 530, width: 880, fontFamily: 'Inter', fontSize: 13, fontWeight: 400, fill: 'rgba(255,255,255,0.4)', letterSpacing: 0.5, lineHeight: 1.5 },
+      { ...baseLayer, text: '$8', x: 0, y: 570, width: 1080, fontFamily: 'Bebas Neue', fontSize: 44, fontWeight: 400, fill: '#2dd4bf', letterSpacing: 0, lineHeight: 1.0 },
+      // Featured drink 2
+      { ...baseLayer, text: 'TIDAL WAVE IPA', x: 0, y: 630, width: 1080, fontFamily: 'Oswald', fontSize: 32, fontWeight: 500, fill: '#ffffff', letterSpacing: 1, lineHeight: 1.2, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Local draft · Pelican Brewing · 6.2% ABV', x: 100, y: 670, width: 880, fontFamily: 'Inter', fontSize: 13, fontWeight: 400, fill: 'rgba(255,255,255,0.4)', letterSpacing: 0.5, lineHeight: 1.5 },
+      { ...baseLayer, text: '$5', x: 0, y: 710, width: 1080, fontFamily: 'Bebas Neue', fontSize: 44, fontWeight: 400, fill: '#2dd4bf', letterSpacing: 0, lineHeight: 1.0 },
+      // Food section
+      { ...baseLayer, elementType: 'divider', text: 'BITES', dividerLabel: 'BITES', x: 0, y: 780, width: 1080, fontFamily: 'Montserrat', fontSize: 14, fontWeight: 600, fill: 'rgba(255,255,255,0.3)', letterSpacing: 4, dividerLineColor: 'rgba(255,255,255,0.1)', dividerLineOpacity: 1, dividerLineThickness: 1, dividerPadding: 100, dividerGap: 16 },
+      { ...baseLayer, text: 'FISH TACOS · $12', x: 0, y: 830, width: 1080, fontFamily: 'Oswald', fontSize: 22, fontWeight: 500, fill: 'rgba(255,255,255,0.65)', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'COCONUT SHRIMP · $14', x: 0, y: 870, width: 1080, fontFamily: 'Oswald', fontSize: 22, fontWeight: 500, fill: 'rgba(255,255,255,0.65)', letterSpacing: 0.5 },
+      { ...baseLayer, text: 'LOADED NACHOS · $10', x: 0, y: 910, width: 1080, fontFamily: 'Oswald', fontSize: 22, fontWeight: 500, fill: 'rgba(255,255,255,0.65)', letterSpacing: 0.5 },
+      // CTA
+      { ...baseLayer, text: 'OPEN 7 DAYS · 12PM - 12AM', x: 0, y: 990, width: 1080, fontFamily: 'Inter', fontSize: 11, fontWeight: 600, fill: 'rgba(45,212,191,0.45)', letterSpacing: 3, textTransform: 'uppercase' },
+      // Footer
+      { ...baseLayer, text: '200 S FRANKLIN ST · SEASIDE, OR', x: 0, y: 1220, width: 1080, fontFamily: 'Inter', fontSize: 11, fontWeight: 400, fill: 'rgba(255,255,255,0.2)', letterSpacing: 2, lineHeight: 1.5, textTransform: 'uppercase' },
+      { ...baseLayer, text: 'Iggys', x: 0, y: 1260, width: 1080, fontFamily: 'Pacifico', fontSize: 48, fontWeight: 400, fill: '#2dd4bf', lineHeight: 1.0, textTransform: 'none' },
+    ],
+  },
+
   // ═══════════════════════════════════════════════════════════
   // EXISTING TEMPLATES
   // ═══════════════════════════════════════════════════════════

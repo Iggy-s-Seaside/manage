@@ -60,7 +60,7 @@ export function MenuManager() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-1">
+      <div className="flex gap-1 mb-6 overflow-x-auto pb-1 scrollbar-hide">
         {MENU_SCHEMAS.map((schema) => (
           <button
             key={schema.table}
@@ -86,47 +86,80 @@ export function MenuManager() {
         </div>
 
         {loading ? (
-          <div className="p-8 flex justify-center">
-            <Loader2 size={24} className="animate-spin text-primary" />
+          <div className="divide-y divide-border">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="px-5 py-3.5 flex items-center gap-4 animate-pulse">
+                <div className="flex-1">
+                  <div className="h-4 bg-surface-hover rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-surface-hover rounded w-1/5" />
+                </div>
+                <div className="h-4 w-12 bg-surface-hover rounded" />
+              </div>
+            ))}
           </div>
         ) : data.length === 0 ? (
           <div className="p-8 text-center text-text-muted text-sm">No items in {activeSchema.label}</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  {displayColumns.map((col) => (
-                    <th key={col.key} className="text-left px-5 py-2.5 text-xs font-semibold text-text-muted uppercase tracking-wider">
-                      {col.label}
-                    </th>
-                  ))}
-                  <th className="text-right px-5 py-2.5 text-xs font-semibold text-text-muted uppercase tracking-wider w-24">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {data.map((item) => (
-                  <tr key={item.id} className="hover:bg-surface-hover/50 transition-colors">
+          <>
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
                     {displayColumns.map((col) => (
-                      <td key={col.key} className="px-5 py-3 text-sm text-text-secondary max-w-[200px] truncate">
-                        {String(item[col.key] ?? '--')}
-                      </td>
+                      <th key={col.key} className="text-left px-5 py-2.5 text-xs font-semibold text-text-muted uppercase tracking-wider">
+                        {col.label}
+                      </th>
                     ))}
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
-                          <Edit2 size={14} />
-                        </button>
-                        <button onClick={() => setDeleteId(item.id)} className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted hover:text-danger transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
+                    <th className="text-right px-5 py-2.5 text-xs font-semibold text-text-muted uppercase tracking-wider w-24">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {data.map((item) => (
+                    <tr key={item.id} className="hover:bg-surface-hover/50 transition-colors">
+                      {displayColumns.map((col) => (
+                        <td key={col.key} className="px-5 py-3 text-sm text-text-secondary max-w-[200px] truncate">
+                          {String(item[col.key] ?? '--')}
+                        </td>
+                      ))}
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
+                            <Edit2 size={14} />
+                          </button>
+                          <button onClick={() => setDeleteId(item.id)} className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted hover:text-danger transition-colors">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="sm:hidden divide-y divide-border">
+              {data.map((item) => (
+                <div key={item.id} className="px-4 py-3 flex items-center gap-3 active:bg-surface-hover/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-primary truncate">{String(item[displayColumns[0]?.key] ?? '--')}</p>
+                    {displayColumns[1] && (
+                      <p className="text-xs text-text-muted mt-0.5">{displayColumns[1].label}: {String(item[displayColumns[1].key] ?? '--')}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => openEdit(item)} className="p-2 rounded-lg hover:bg-surface-hover text-text-muted hover:text-primary transition-colors" aria-label="Edit item">
+                      <Edit2 size={16} />
+                    </button>
+                    <button onClick={() => setDeleteId(item.id)} className="p-2 rounded-lg hover:bg-surface-hover text-text-muted hover:text-danger transition-colors" aria-label="Delete item">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

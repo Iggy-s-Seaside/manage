@@ -42,7 +42,7 @@ export function Specials() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Specials</h1>
           <p className="text-sm text-text-muted mt-1">{specials.length} total specials</p>
@@ -75,13 +75,13 @@ export function Specials() {
                 </div>
                 <Link
                   to={draft.specialId ? `/specials/editor/${draft.specialId}` : '/specials/editor'}
-                  className="text-xs font-medium text-primary hover:text-primary-hover"
+                  className="text-xs font-medium text-primary hover:text-primary-hover px-3 py-2 min-h-[44px] flex items-center rounded-lg hover:bg-primary-50"
                 >
                   Continue
                 </Link>
                 <button
                   onClick={() => handleDiscardDraft(draft)}
-                  className="text-xs text-text-muted hover:text-danger"
+                  className="text-xs text-text-muted hover:text-danger px-3 py-2 min-h-[44px] flex items-center rounded-lg hover:bg-surface-hover"
                 >
                   Discard
                 </button>
@@ -95,13 +95,14 @@ export function Specials() {
       {showTemplates && (
         <div className="card p-5 mb-6">
           <h3 className="text-sm font-semibold text-text-primary mb-3">Quick Start with a Template</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {[
               { id: 'happy-hour', name: 'Happy Hour', color: 'from-amber-500 to-orange-600' },
               { id: 'dj-night', name: 'DJ Night', color: 'from-purple-600 to-blue-600' },
               { id: 'holiday', name: 'Holiday Special', color: 'from-red-600 to-green-600' },
               { id: 'drink', name: 'Drink Special', color: 'from-teal-500 to-cyan-500' },
               { id: 'food', name: 'Food Special', color: 'from-orange-500 to-red-500' },
+              { id: 'sunset-sessions', name: 'Sunset Sessions', color: 'from-amber-500 to-rose-700' },
             ].map((tmpl) => (
               <Link
                 key={tmpl.id}
