@@ -165,32 +165,37 @@ export function useEditorState() {
   const addTextLayer = useCallback((overrides?: Partial<TextLayer>) => {
     // Determine final width/height first so we can center properly
     const finalWidth = overrides?.width ?? 300;
-    const finalHeight = overrides?.imageHeight ?? 60;
-
-    // Calculate centered position based on actual element size
-    let baseX = Math.round((state.canvasWidth - finalWidth) / 2);
-    let baseY = Math.round((state.canvasHeight - finalHeight) / 2);
+    const fontSize = overrides?.fontSize ?? 48;
+    // Estimate element height based on type
+    const estimatedHeight = overrides?.imageHeight ?? Math.round(fontSize * 1.3);
 
     // Use explicit position from overrides if provided (e.g., image layers)
-    if (overrides?.x !== undefined) baseX = overrides.x;
-    if (overrides?.y !== undefined) baseY = overrides.y;
+    let baseX = overrides?.x ?? Math.round((state.canvasWidth - finalWidth) / 2);
+    let baseY: number;
 
-    // Check if any existing layer is near this position and offset to avoid stacking
-    const OVERLAP_THRESHOLD = 50;
-    let attempts = 0;
-    while (attempts < 10) {
-      const overlapping = state.layers.some(l =>
-        Math.abs(l.x - baseX) < OVERLAP_THRESHOLD && Math.abs(l.y - baseY) < OVERLAP_THRESHOLD
-      );
-      if (!overlapping) break;
-      baseX += 60;
-      baseY += 80;
-      attempts++;
+    if (overrides?.y !== undefined) {
+      baseY = overrides.y;
+    } else if (state.layers.length === 0) {
+      // First element: place near the top with some padding
+      baseY = 80;
+    } else {
+      // Stack below the lowest existing element
+      const maxY = Math.max(...state.layers.map(l => {
+        const lHeight = l.imageHeight ?? Math.round((l.fontSize ?? 48) * 1.3);
+        return l.y + lHeight;
+      }), 0);
+      baseY = maxY + 40;
+
+      // If we'd overflow the canvas, wrap back to top with offset
+      if (baseY + estimatedHeight > state.canvasHeight) {
+        baseY = 80;
+        baseX = Math.round((state.canvasWidth - finalWidth) / 2) + 40;
+      }
     }
 
     // Clamp within canvas bounds
     baseX = Math.max(0, Math.min(baseX, state.canvasWidth - finalWidth));
-    baseY = Math.max(0, Math.min(baseY, state.canvasHeight - finalHeight));
+    baseY = Math.max(0, Math.min(baseY, state.canvasHeight - estimatedHeight));
 
     const layer: TextLayer = {
       id: crypto.randomUUID(),

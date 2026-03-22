@@ -58,7 +58,7 @@ export const MobileFontPicker = memo(function MobileFontPicker({
           <div className="w-px h-5 bg-border/40 mx-1" />
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-surface-hover active:scale-90 transition-all"
+            className="p-2.5 rounded-xl hover:bg-surface-hover active:scale-90 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             <X size={16} className="text-text-muted" />
           </button>
@@ -84,7 +84,7 @@ export const MobileFontPicker = memo(function MobileFontPicker({
               <button
                 key={font}
                 onClick={() => onUpdate({ fontFamily: font })}
-                className={`shrink-0 px-4 py-2 rounded-xl transition-all active:scale-95 ${
+                className={`shrink-0 px-4 py-2.5 rounded-xl transition-all active:scale-95 ${
                   isActive
                     ? 'bg-primary text-white shadow-sm'
                     : 'bg-surface-hover/60 text-text-secondary hover:bg-surface-active'
@@ -117,7 +117,7 @@ function StyleBtn({ active, onClick, label, children }: { active: boolean; onCli
     <button
       onClick={onClick}
       aria-label={label}
-      className={`p-2 rounded-lg transition-all active:scale-90 ${
+      className={`p-2.5 rounded-lg transition-all active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center ${
         active
           ? 'bg-primary text-white shadow-sm'
           : 'bg-surface-hover/60 text-text-muted hover:bg-surface-active'

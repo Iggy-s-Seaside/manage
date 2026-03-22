@@ -97,6 +97,21 @@ export function SpecialEditor() {
     setMobileFiltersOpen(false);
   }, []);
 
+  const handleAlignCenterH = useCallback(() => {
+    if (!state.selectedLayerId) return;
+    const layer = state.layers.find(l => l.id === state.selectedLayerId);
+    if (!layer) return;
+    dispatch({ type: 'UPDATE_LAYER', id: layer.id, changes: { x: Math.round((state.canvasWidth - layer.width) / 2) } });
+  }, [state.selectedLayerId, state.layers, state.canvasWidth, dispatch]);
+
+  const handleAlignCenterV = useCallback(() => {
+    if (!state.selectedLayerId) return;
+    const layer = state.layers.find(l => l.id === state.selectedLayerId);
+    if (!layer) return;
+    const estimatedHeight = layer.imageHeight ?? Math.round(layer.fontSize * (layer.lineHeight || 1.3));
+    dispatch({ type: 'UPDATE_LAYER', id: layer.id, changes: { y: Math.round((state.canvasHeight - estimatedHeight) / 2) } });
+  }, [state.selectedLayerId, state.layers, state.canvasHeight, dispatch]);
+
   const [customSizeOpen, setCustomSizeOpen] = useState(false);
   const [customWidth, setCustomWidth] = useState(1080);
   const [customHeight, setCustomHeight] = useState(1080);
@@ -116,6 +131,27 @@ export function SpecialEditor() {
 
   // Draft persistence
   const { loadDraft, clearDraft, hasDraft } = useDraftPersistence(id, state, saveForm);
+
+  // Keyboard shortcuts: Cmd/Ctrl+Z for undo, Cmd/Ctrl+Shift+Z for redo, Delete/Backspace for delete
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          dispatch({ type: 'REDO' });
+        } else {
+          dispatch({ type: 'UNDO' });
+        }
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedLayerId) {
+        e.preventDefault();
+        dispatch({ type: 'REMOVE_LAYER', id: state.selectedLayerId });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dispatch, state.selectedLayerId]);
 
   // Warn on browser close/refresh with unsaved changes
   useEffect(() => {
@@ -1058,6 +1094,8 @@ export function SpecialEditor() {
                   layer={selectedLayer}
                   onUpdate={(changes) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, changes })}
                   onDelete={() => dispatch({ type: 'REMOVE_LAYER', id: selectedLayer.id })}
+                  canvasWidth={state.canvasWidth}
+                  canvasHeight={state.canvasHeight}
                 />
               ) : (
                 <div className="text-center py-8">
@@ -1091,6 +1129,8 @@ export function SpecialEditor() {
         onAddImageFromLibrary={() => { closeAllOverlays(); setLibraryMode('layer'); setLibraryOpen(true); }}
         onConvertBgToLayer={state.backgroundImage ? handleConvertBgToLayer : undefined}
         onFitToCanvas={selectedLayer && (selectedLayer.elementType === 'image' || selectedLayer.elementType === 'video') ? () => handleFitLayerToCanvas(selectedLayer.id) : undefined}
+        onAlignCenterH={handleAlignCenterH}
+        onAlignCenterV={handleAlignCenterV}
         onUpload={() => { closeAllOverlays(); bgInputRef.current?.click(); }}
         onOpenLayers={() => { closeAllOverlays(); setMobileSheet('layers'); }}
         onOpenProperties={() => { closeAllOverlays(); setMobileSheet('properties'); }}
@@ -1145,6 +1185,8 @@ export function SpecialEditor() {
             layer={selectedLayer}
             onUpdate={(changes) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, changes })}
             onDelete={() => dispatch({ type: 'REMOVE_LAYER', id: selectedLayer.id })}
+            canvasWidth={state.canvasWidth}
+            canvasHeight={state.canvasHeight}
           />
         ) : (
           <div className="text-center py-8">

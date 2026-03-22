@@ -8,6 +8,8 @@ interface PropertyPanelProps {
   layer: TextLayer;
   onUpdate: (changes: Partial<TextLayer>) => void;
   onDelete: () => void;
+  canvasWidth?: number;
+  canvasHeight?: number;
 }
 
 /** Convert any CSS color to hex for <input type="color"> */
@@ -70,7 +72,7 @@ function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }: {
   );
 }
 
-export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDelete }: PropertyPanelProps) {
+export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDelete, canvasWidth = 1080, canvasHeight = 1920 }: PropertyPanelProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -118,7 +120,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
               type="color"
               value={layer.dividerLineColor || layer.fill}
               onChange={(e) => onUpdate({ dividerLineColor: e.target.value })}
-              className="w-8 h-8 rounded-lg cursor-pointer border border-border ml-auto"
+              className="w-10 h-10 rounded-lg cursor-pointer border border-border ml-auto"
             />
           </div>
           <SliderRow label="Thickness" value={layer.dividerLineThickness ?? 1} min={1} max={10} onChange={(v) => onUpdate({ dividerLineThickness: v })} />
@@ -166,14 +168,14 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
                 type="color"
                 value={layer.fill}
                 onChange={(e) => onUpdate({ fill: e.target.value })}
-                className="w-8 h-8 rounded-lg cursor-pointer border border-border"
+                className="w-10 h-10 rounded-lg cursor-pointer border border-border"
               />
               <div className="flex gap-1.5 flex-wrap">
                 {BRAND_COLORS.map((c) => (
                   <button
                     key={c}
                     onClick={() => onUpdate({ fill: c })}
-                    className={`w-8 h-8 rounded-full border-2 transition-all active:scale-90 ${layer.fill === c ? 'border-primary scale-110 shadow-md' : 'border-border/50'}`}
+                    className={`w-10 h-10 rounded-full border-2 transition-all active:scale-90 ${layer.fill === c ? 'border-primary scale-110 shadow-md' : 'border-border/50'}`}
                     style={{ backgroundColor: c }}
                   />
                 ))}
@@ -187,7 +189,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
               type="color"
               value={layer.stroke || '#000000'}
               onChange={(e) => onUpdate({ stroke: e.target.value })}
-              className="w-7 h-7 rounded-lg cursor-pointer border border-border"
+              className="w-10 h-10 rounded-lg cursor-pointer border border-border"
             />
           </div>
           <SliderRow label="Stroke Width" value={layer.strokeWidth} min={0} max={10} step={0.5} unit="px" onChange={(v) => onUpdate({ strokeWidth: v })} />
@@ -197,14 +199,14 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
 
       {/* ─── Shadow (text only) ─── */}
       {isText && (
-        <Section title="Shadow">
+        <Section title="Shadow" defaultOpen={false}>
           <div className="flex items-center gap-2 mb-2">
             <label className="text-xs text-text-muted">Color</label>
             <input
               type="color"
               value={toHex(layer.shadowColor)}
               onChange={(e) => onUpdate({ shadowColor: e.target.value })}
-              className="w-7 h-7 rounded-lg cursor-pointer border border-border"
+              className="w-10 h-10 rounded-lg cursor-pointer border border-border"
             />
           </div>
           <SliderRow label="Blur" value={layer.shadowBlur} min={0} max={30} onChange={(v) => onUpdate({ shadowBlur: v })} />
@@ -249,7 +251,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
               type="color"
               value={(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS).overlayColor}
               onChange={(e) => onUpdate({ imageFilters: { ...(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS), overlayColor: e.target.value } })}
-              className="w-7 h-7 rounded-lg cursor-pointer border border-border ml-auto"
+              className="w-10 h-10 rounded-lg cursor-pointer border border-border ml-auto"
             />
           </div>
           <SliderRow label="Overlay Opacity" value={(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS).overlayOpacity} min={0} max={1} step={0.05} onChange={(v) => onUpdate({ imageFilters: { ...(layer.imageFilters ?? DEFAULT_IMAGE_FILTERS), overlayOpacity: v } })} />
@@ -282,7 +284,7 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
 
       {/* ─── Image Layer: Crop ─── */}
       {isImage && (
-        <Section title="Crop">
+        <Section title="Crop" defaultOpen={false}>
           <SliderRow label="Top" value={layer.imageCrop?.top ?? 0} min={0} max={50} unit="%" onChange={(v) => onUpdate({ imageCrop: { top: v, right: layer.imageCrop?.right ?? 0, bottom: layer.imageCrop?.bottom ?? 0, left: layer.imageCrop?.left ?? 0 } })} />
           <SliderRow label="Bottom" value={layer.imageCrop?.bottom ?? 0} min={0} max={50} unit="%" onChange={(v) => onUpdate({ imageCrop: { top: layer.imageCrop?.top ?? 0, right: layer.imageCrop?.right ?? 0, bottom: v, left: layer.imageCrop?.left ?? 0 } })} />
           <SliderRow label="Left" value={layer.imageCrop?.left ?? 0} min={0} max={50} unit="%" onChange={(v) => onUpdate({ imageCrop: { top: layer.imageCrop?.top ?? 0, right: layer.imageCrop?.right ?? 0, bottom: layer.imageCrop?.bottom ?? 0, left: v } })} />
@@ -299,12 +301,12 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
       )}
 
       {/* ─── Position ─── */}
-      <Section title="Position">
-        <SliderRow label="X" value={Math.round(layer.x)} min={0} max={1080} onChange={(v) => onUpdate({ x: v })} />
-        <SliderRow label="Y" value={Math.round(layer.y)} min={0} max={1920} onChange={(v) => onUpdate({ y: v })} />
-        <SliderRow label="Width" value={Math.round(layer.width)} min={50} max={1080} onChange={(v) => onUpdate({ width: v })} />
+      <Section title="Position" defaultOpen={false}>
+        <SliderRow label="X" value={Math.round(layer.x)} min={0} max={canvasWidth} onChange={(v) => onUpdate({ x: v })} />
+        <SliderRow label="Y" value={Math.round(layer.y)} min={0} max={canvasHeight} onChange={(v) => onUpdate({ y: v })} />
+        <SliderRow label="Width" value={Math.round(layer.width)} min={50} max={canvasWidth} onChange={(v) => onUpdate({ width: v })} />
         {isImage && (
-          <SliderRow label="Height" value={Math.round(layer.imageHeight || layer.width)} min={30} max={1920} onChange={(v) => onUpdate({ imageHeight: v })} />
+          <SliderRow label="Height" value={Math.round(layer.imageHeight || layer.width)} min={30} max={canvasHeight} onChange={(v) => onUpdate({ imageHeight: v })} />
         )}
         <SliderRow label="Rotation" value={Math.round(layer.rotation)} min={0} max={360} unit="deg" onChange={(v) => onUpdate({ rotation: v })} />
       </Section>
@@ -428,11 +430,22 @@ export const PropertyPanel = memo(function PropertyPanel({ layer, onUpdate, onDe
 
 PropertyPanel.displayName = 'PropertyPanel';
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div>
-      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{title}</h4>
-      {children}
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full py-2 text-xs font-semibold text-text-muted uppercase tracking-wider"
+      >
+        {title}
+        <ChevronDown size={14} className={`transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
+      </button>
+      <div className={`grid transition-all duration-200 ease-out ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+        <div className="overflow-hidden">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
