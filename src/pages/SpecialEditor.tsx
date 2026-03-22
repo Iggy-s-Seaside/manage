@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Undo2, Redo2, Download, Save, Upload, RectangleVertical, RectangleHorizontal, Square,
   Loader2, Image, Sliders, Type, Heading1, Heading2, Tag, Megaphone, ZoomIn, ZoomOut, Maximize,
-  LayoutTemplate, Ruler, Minus, Sparkles, Copy
+  LayoutTemplate, Ruler, Minus, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DomCanvas, type DomCanvasHandle } from '../components/editor/DomCanvas';

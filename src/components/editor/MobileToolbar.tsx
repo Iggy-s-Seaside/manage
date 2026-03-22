@@ -1,6 +1,6 @@
 import { useState, memo } from 'react';
 import {
-  Plus, Image, Upload, Layers, SlidersHorizontal,
+  Plus, Image, Layers, SlidersHorizontal,
   Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate,
   Square, RectangleVertical, RectangleHorizontal, Type as TypeIcon, Blend,
   FolderOpen, Maximize, ArrowDownToLine, AlignHorizontalJustifyCenter, AlignVerticalJustifyCenter, Copy
@@ -59,15 +59,15 @@ interface MobileToolbarProps {
 export const MobileToolbar = memo(function MobileToolbar({
   onAddText,
   onAddImage,
-  onOpenLibrary,
+  onOpenLibrary: _onOpenLibrary,
   onAddImageFromLibrary,
-  onUpload,
+  onUpload: _onUpload,
   onOpenLayers,
   onOpenProperties,
   onOpenFontPicker,
   onOpenBlendPicker,
   onCloseOverlays,
-  onOpenAdjustments,
+  onOpenAdjustments: _onOpenAdjustments,
   onOpenTemplates,
   onConvertBgToLayer,
   onFitToCanvas,
