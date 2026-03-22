@@ -156,27 +156,29 @@ export const MobileToolbar = memo(function MobileToolbar({
             className="absolute bottom-full right-3 mb-2 z-50 bg-surface/95 backdrop-blur-xl border border-border/30 rounded-2xl shadow-modal p-1.5 min-w-[180px] max-h-[70vh] overflow-y-auto scrollbar-hide"
             style={{ animation: 'popUp 200ms cubic-bezier(0.32, 0.72, 0, 1)' }}
           >
-            <PopoverButton icon={LayoutTemplate} label="Templates" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
-            <PopoverButton icon={Image} label="Library" onClick={() => { onOpenLibrary(); setMoreOpen(false); }} />
-            <PopoverButton icon={Upload} label="Upload" onClick={() => { onUpload(); setMoreOpen(false); }} />
-            <PopoverButton icon={SlidersHorizontal} label="Adjustments" onClick={() => { onOpenAdjustments(); setMoreOpen(false); }} />
-            {onConvertBgToLayer && (
-              <PopoverButton icon={ArrowDownToLine} label="BG → Layer" onClick={() => { onConvertBgToLayer(); setMoreOpen(false); }} />
-            )}
-            {onFitToCanvas && (
-              <PopoverButton icon={Maximize} label="Fit to Canvas" onClick={() => { onFitToCanvas(); setMoreOpen(false); }} />
-            )}
-            {hasSelection && onAlignCenterH && (
-              <>
-                <PopoverButton icon={AlignHorizontalJustifyCenter} label="Center H" onClick={() => { onAlignCenterH(); setMoreOpen(false); }} />
-                <PopoverButton icon={AlignVerticalJustifyCenter} label="Center V" onClick={() => { onAlignCenterV?.(); setMoreOpen(false); }} />
-              </>
-            )}
-            {hasSelection && onDuplicate && (
-              <PopoverButton icon={Copy} label="Duplicate" onClick={() => { onDuplicate(); setMoreOpen(false); }} />
+            {/* Background — most used, goes first */}
+            {onSetBgColor && (
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs text-text-muted font-medium">Background</span>
+                  <input
+                    type="color"
+                    value={bgColor}
+                    onChange={(e) => onSetBgColor(e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer border border-border ml-auto"
+                  />
+                </div>
+                {onSetGradient && (
+                  <GradientPicker
+                    currentGradient={currentGradient}
+                    onSelect={onSetGradient}
+                  />
+                )}
+              </div>
             )}
             <div className="h-px bg-border/40 my-1 mx-2" />
-            {/* Canvas size shortcuts */}
+
+            {/* Canvas size */}
             {onSetCanvasSize && (
               <div className="flex items-center gap-1 px-3 py-2">
                 <span className="text-xs text-text-muted mr-auto">Size</span>
@@ -201,28 +203,27 @@ export const MobileToolbar = memo(function MobileToolbar({
                 ))}
               </div>
             )}
-            {/* Background color */}
-            {onSetBgColor && (
-              <div className="flex items-center gap-2 px-3 py-2">
-                <span className="text-xs text-text-muted mr-auto">BG</span>
-                <input
-                  type="color"
-                  value={bgColor}
-                  onChange={(e) => onSetBgColor(e.target.value)}
-                  className="w-11 h-11 rounded-lg cursor-pointer border border-border"
-                />
-              </div>
-            )}
-            {/* Gradient picker */}
-            {onSetGradient && (
-              <div className="px-3 py-2">
-                <GradientPicker
-                  currentGradient={currentGradient}
-                  onSelect={onSetGradient}
-                />
-              </div>
-            )}
             <div className="h-px bg-border/40 my-1 mx-2" />
+
+            {/* Layer actions */}
+            {hasSelection && onDuplicate && (
+              <PopoverButton icon={Copy} label="Duplicate" onClick={() => { onDuplicate(); setMoreOpen(false); }} />
+            )}
+            {hasSelection && onAlignCenterH && (
+              <>
+                <PopoverButton icon={AlignHorizontalJustifyCenter} label="Center H" onClick={() => { onAlignCenterH(); setMoreOpen(false); }} />
+                <PopoverButton icon={AlignVerticalJustifyCenter} label="Center V" onClick={() => { onAlignCenterV?.(); setMoreOpen(false); }} />
+              </>
+            )}
+            {onFitToCanvas && (
+              <PopoverButton icon={Maximize} label="Fit to Canvas" onClick={() => { onFitToCanvas(); setMoreOpen(false); }} />
+            )}
+            {onConvertBgToLayer && (
+              <PopoverButton icon={ArrowDownToLine} label="BG → Layer" onClick={() => { onConvertBgToLayer(); setMoreOpen(false); }} />
+            )}
+
+            <div className="h-px bg-border/40 my-1 mx-2" />
+            <PopoverButton icon={LayoutTemplate} label="Templates" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
             <PopoverButton icon={Download} label="Export" onClick={() => { onExport(); setMoreOpen(false); }} />
           </div>
         </>

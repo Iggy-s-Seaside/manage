@@ -122,11 +122,9 @@ export const TextElement = memo<TextElementProps>(({
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
         lineHeight: layer.lineHeight || 1.3,
-        // Ensure minimum 44px touch target for small text
-        minHeight: !isEditing ? 44 : undefined,
-        // Center text vertically within the 44px touch target (only when not editing)
-        display: !isEditing ? 'flex' : 'block',
-        alignItems: !isEditing ? 'center' : undefined,
+        // Ensure minimum 44px touch target for small text (via invisible expander, not minHeight)
+        // Note: do NOT use display:flex here — it conflicts with text wrapping and causes
+        // duplicated text rendering on mobile when combined with word-break + zoom scaling
         cursor: layer.locked ? 'not-allowed' : (isEditing ? 'text' : 'move'),
         pointerEvents: 'auto',
         // Edit mode styling
