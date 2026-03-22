@@ -54,11 +54,19 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
   const videoRefs = useVideoRefs();
 
   // Calculate fit scale on mount and resize
+  const lastViewportDims = useRef({ w: 0, h: 0 });
   useEffect(() => {
     const calculate = () => {
       if (!viewportRef.current) return;
       const vw = viewportRef.current.clientWidth;
       const vh = viewportRef.current.clientHeight;
+      // Guard against trivial resize events (e.g. overlay mount/unmount jitter)
+      if (
+        lastViewportDims.current.w > 0 &&
+        Math.abs(vw - lastViewportDims.current.w) < 2 &&
+        Math.abs(vh - lastViewportDims.current.h) < 2
+      ) return;
+      lastViewportDims.current = { w: vw, h: vh };
       const isMobile = vw < 768;
       // On mobile: minimal padding, account for toolbar overlay (60px)
       // On desktop: standard padding, fit both dimensions

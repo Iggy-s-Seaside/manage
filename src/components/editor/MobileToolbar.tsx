@@ -1,9 +1,10 @@
 import { useState, memo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus, Image, Layers, SlidersHorizontal,
   Undo2, Redo2, Save, Download, Loader2, MoreHorizontal, LayoutTemplate,
   Square, RectangleVertical, RectangleHorizontal, Type as TypeIcon, Blend,
-  FolderOpen, Maximize, ArrowDownToLine, AlignHorizontalJustifyCenter, AlignVerticalJustifyCenter, Copy
+  FolderOpen, Maximize, ArrowDownToLine, AlignHorizontalJustifyCenter, AlignVerticalJustifyCenter, Copy, Upload
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 import { GradientPicker } from './GradientPicker';
@@ -59,9 +60,9 @@ interface MobileToolbarProps {
 export const MobileToolbar = memo(function MobileToolbar({
   onAddText,
   onAddImage,
-  onOpenLibrary: _onOpenLibrary,
+  onOpenLibrary,
   onAddImageFromLibrary,
-  onUpload: _onUpload,
+  onUpload,
   onOpenLayers,
   onOpenProperties,
   onOpenFontPicker,
@@ -87,7 +88,7 @@ export const MobileToolbar = memo(function MobileToolbar({
   bgColor = '#0a0f0f',
   canUndo,
   canRedo,
-  uploading: _uploading,
+  uploading,
   hasSelection,
   isImageSelected = false,
   activeSheet,
@@ -148,85 +149,154 @@ export const MobileToolbar = memo(function MobileToolbar({
         </>
       )}
 
-      {/* More popover */}
-      {moreOpen && (
+      {/* More — half-sheet drawer (portaled to body to escape toolbar's transform containment) */}
+      {moreOpen && createPortal(
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
           <div
-            className="absolute bottom-full right-3 mb-2 z-50 bg-surface/95 backdrop-blur-xl border border-border/30 rounded-2xl shadow-modal p-1.5 min-w-[180px] max-h-[70vh] overflow-y-auto scrollbar-hide"
-            style={{ animation: 'popUp 200ms cubic-bezier(0.32, 0.72, 0, 1)' }}
+            className="fixed inset-0 z-[65]"
+            style={{ backgroundColor: 'rgba(0,0,0,0.4)', animation: 'fadeIn 200ms ease-out' }}
+            onClick={() => setMoreOpen(false)}
+          />
+          <div
+            className="fixed inset-x-0 bottom-0 z-[66] bg-surface/98 backdrop-blur-2xl border-t border-border/20 rounded-t-3xl safe-area-bottom"
+            style={{
+              maxHeight: '70vh',
+              animation: 'sheetSlideUp 300ms cubic-bezier(0.32, 0.72, 0, 1)',
+            }}
           >
-            {/* Background — most used, goes first */}
-            {onSetBgColor && (
-              <div className="px-3 py-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs text-text-muted font-medium">Background</span>
-                  <input
-                    type="color"
-                    value={bgColor}
-                    onChange={(e) => onSetBgColor(e.target.value)}
-                    className="w-8 h-8 rounded-lg cursor-pointer border border-border ml-auto"
-                  />
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-border/60" />
+            </div>
+
+            <div className="overflow-y-auto px-5 pb-6 space-y-5" style={{ maxHeight: 'calc(70vh - 24px)', WebkitOverflowScrolling: 'touch' }}>
+
+              {/* ── Background section ── */}
+              {onSetBgColor && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Background</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-text-muted">Solid</span>
+                      <input
+                        type="color"
+                        value={bgColor}
+                        onChange={(e) => onSetBgColor(e.target.value)}
+                        className="w-10 h-10 rounded-xl cursor-pointer border-2 border-border/40"
+                      />
+                    </div>
+                  </div>
+                  {onSetGradient && (
+                    <GradientPicker
+                      currentGradient={currentGradient}
+                      onSelect={onSetGradient}
+                      mobile
+                    />
+                  )}
+                  {/* Background image buttons */}
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => { onOpenLibrary(); setMoreOpen(false); }}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-surface-hover/60 text-text-secondary text-sm font-medium active:scale-[0.98] transition-all"
+                    >
+                      <FolderOpen size={16} /> Library
+                    </button>
+                    <button
+                      onClick={() => { onUpload(); setMoreOpen(false); }}
+                      disabled={uploading}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-surface-hover/60 text-text-secondary text-sm font-medium active:scale-[0.98] transition-all disabled:opacity-40"
+                    >
+                      {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                      Upload BG
+                    </button>
+                  </div>
                 </div>
-                {onSetGradient && (
-                  <GradientPicker
-                    currentGradient={currentGradient}
-                    onSelect={onSetGradient}
-                  />
-                )}
+              )}
+
+              {/* ── Canvas size section ── */}
+              {onSetCanvasSize && (
+                <div>
+                  <span className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3 block">Canvas Size</span>
+                  <div className="grid grid-cols-4 gap-2">
+                    {([
+                      { w: 1080, h: 1080, icon: Square, label: 'Square', ratio: '1:1' },
+                      { w: 1080, h: 1350, icon: RectangleVertical, label: 'Post', ratio: '4:5' },
+                      { w: 1080, h: 1920, icon: RectangleVertical, label: 'Story', ratio: '9:16' },
+                      { w: 1920, h: 1080, icon: RectangleHorizontal, label: 'Wide', ratio: '16:9' },
+                    ] as const).map(({ w, h, icon: SIcon, label: sLabel, ratio }) => {
+                      const isActive = canvasWidth === w && canvasHeight === h;
+                      return (
+                        <button
+                          key={ratio}
+                          onClick={() => onSetCanvasSize(w, h)}
+                          className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl transition-all active:scale-95 ${
+                            isActive
+                              ? 'bg-primary/15 ring-2 ring-primary'
+                              : 'bg-surface-hover/60 hover:bg-surface-hover'
+                          }`}
+                        >
+                          <SIcon
+                            size={20}
+                            className={`${isActive ? 'text-primary' : 'text-text-muted'} ${ratio === '9:16' ? 'scale-y-125' : ''}`}
+                          />
+                          <span className={`text-[11px] font-semibold ${isActive ? 'text-primary' : 'text-text-secondary'}`}>
+                            {sLabel}
+                          </span>
+                          <span className={`text-[10px] ${isActive ? 'text-primary/70' : 'text-text-muted'}`}>
+                            {ratio}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Actions section ── */}
+              {(hasSelection || onFitToCanvas || onConvertBgToLayer) && (
+                <div>
+                  <span className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3 block">Actions</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {hasSelection && onDuplicate && (
+                      <SheetActionButton icon={Copy} label="Duplicate" onClick={() => { onDuplicate(); setMoreOpen(false); }} />
+                    )}
+                    {hasSelection && onAlignCenterH && (
+                      <SheetActionButton icon={AlignHorizontalJustifyCenter} label="Center H" onClick={() => { onAlignCenterH(); setMoreOpen(false); }} />
+                    )}
+                    {hasSelection && onAlignCenterV && (
+                      <SheetActionButton icon={AlignVerticalJustifyCenter} label="Center V" onClick={() => { onAlignCenterV(); setMoreOpen(false); }} />
+                    )}
+                    {onFitToCanvas && (
+                      <SheetActionButton icon={Maximize} label="Fit Canvas" onClick={() => { onFitToCanvas(); setMoreOpen(false); }} />
+                    )}
+                    {onConvertBgToLayer && (
+                      <SheetActionButton icon={ArrowDownToLine} label="BG → Layer" onClick={() => { onConvertBgToLayer(); setMoreOpen(false); }} />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Quick links ── */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { onOpenTemplates(); setMoreOpen(false); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-surface-hover/60 text-text-secondary text-sm font-medium active:scale-[0.98] transition-all"
+                >
+                  <LayoutTemplate size={16} />
+                  Templates
+                </button>
+                <button
+                  onClick={() => { onExport(); setMoreOpen(false); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-surface-hover/60 text-text-secondary text-sm font-medium active:scale-[0.98] transition-all"
+                >
+                  <Download size={16} />
+                  Export
+                </button>
               </div>
-            )}
-            <div className="h-px bg-border/40 my-1 mx-2" />
-
-            {/* Canvas size */}
-            {onSetCanvasSize && (
-              <div className="flex items-center gap-1 px-3 py-2">
-                <span className="text-xs text-text-muted mr-auto">Size</span>
-                {([
-                  { w: 1080, h: 1080, icon: Square, label: '1:1' },
-                  { w: 1080, h: 1350, icon: RectangleVertical, label: '4:5' },
-                  { w: 1080, h: 1920, icon: RectangleVertical, label: '9:16' },
-                  { w: 1920, h: 1080, icon: RectangleHorizontal, label: '16:9' },
-                ] as const).map(({ w, h, icon: SIcon, label: sLabel }) => (
-                  <button
-                    key={sLabel}
-                    onClick={() => { onSetCanvasSize(w, h); }}
-                    className={`p-2.5 rounded-lg transition-all active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center ${
-                      canvasWidth === w && canvasHeight === h
-                        ? 'bg-primary text-white'
-                        : 'text-text-muted hover:bg-surface-hover'
-                    }`}
-                    aria-label={sLabel}
-                  >
-                    <SIcon size={14} className={sLabel === '9:16' ? 'scale-y-125' : ''} />
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="h-px bg-border/40 my-1 mx-2" />
-
-            {/* Layer actions */}
-            {hasSelection && onDuplicate && (
-              <PopoverButton icon={Copy} label="Duplicate" onClick={() => { onDuplicate(); setMoreOpen(false); }} />
-            )}
-            {hasSelection && onAlignCenterH && (
-              <>
-                <PopoverButton icon={AlignHorizontalJustifyCenter} label="Center H" onClick={() => { onAlignCenterH(); setMoreOpen(false); }} />
-                <PopoverButton icon={AlignVerticalJustifyCenter} label="Center V" onClick={() => { onAlignCenterV?.(); setMoreOpen(false); }} />
-              </>
-            )}
-            {onFitToCanvas && (
-              <PopoverButton icon={Maximize} label="Fit to Canvas" onClick={() => { onFitToCanvas(); setMoreOpen(false); }} />
-            )}
-            {onConvertBgToLayer && (
-              <PopoverButton icon={ArrowDownToLine} label="BG → Layer" onClick={() => { onConvertBgToLayer(); setMoreOpen(false); }} />
-            )}
-
-            <div className="h-px bg-border/40 my-1 mx-2" />
-            <PopoverButton icon={LayoutTemplate} label="Templates" onClick={() => { onOpenTemplates(); setMoreOpen(false); }} />
-            <PopoverButton icon={Download} label="Export" onClick={() => { onExport(); setMoreOpen(false); }} />
+            </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
 
       {/* Main toolbar — single row, anchored to bottom */}
@@ -260,12 +330,17 @@ export const MobileToolbar = memo(function MobileToolbar({
         <ToolButton icon={MoreHorizontal} label="More" onClick={() => { if (!moreOpen) onCloseOverlays(); setMoreOpen(!moreOpen); setAddMenuOpen(false); }} active={moreOpen} />
       </div>
 
-      {/* Inline keyframes for popover animation */}
+      {/* Inline keyframes */}
       <style>{`
         @keyframes popUp {
           0% { opacity: 0; transform: translateY(8px) scale(0.96); }
           80% { opacity: 1; transform: translateY(-1px) scale(1.01); }
           100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes sheetSlideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
         }
       `}</style>
     </div>
@@ -312,6 +387,26 @@ function ToolButton({
     >
       {loading ? <Loader2 size={20} className="animate-spin" /> : <Icon size={20} />}
       <span className="text-[10px] leading-none font-medium">{label}</span>
+    </button>
+  );
+}
+
+function SheetActionButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: typeof Plus;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl bg-surface-hover/60 text-text-secondary hover:bg-surface-hover active:scale-95 transition-all"
+    >
+      <Icon size={18} />
+      <span className="text-[11px] font-medium">{label}</span>
     </button>
   );
 }

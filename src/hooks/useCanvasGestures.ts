@@ -74,11 +74,17 @@ export function useCanvasGestures({
     applyTransform();
   }, [viewportRef, canvasWidth, canvasHeight, applyTransform]);
 
+  // Keep refs to always-current functions (avoids stale closures in the effect below)
+  const centerCanvasRef = useRef(centerCanvas);
+  centerCanvasRef.current = centerCanvas;
+  const commitToStateRef = useRef(commitToState);
+  commitToStateRef.current = commitToState;
+
   // Sync base scale changes (window resize, canvas size change)
   useEffect(() => {
     zoomRef.current = baseScale;
-    centerCanvas(baseScale);
-    commitToState();
+    centerCanvasRef.current(baseScale);
+    commitToStateRef.current();
   }, [baseScale, canvasWidth, canvasHeight]);
 
   // ══════════════════════════════════════════════════════════════════

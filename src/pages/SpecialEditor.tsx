@@ -281,10 +281,15 @@ export function SpecialEditor() {
       const img = new window.Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
-        const maxWidth = Math.min(img.naturalWidth, state.canvasWidth * 0.8);
         const ratio = img.naturalHeight / img.naturalWidth;
-        const layerWidth = Math.round(maxWidth);
-        const layerHeight = Math.round(maxWidth * ratio);
+        let layerWidth = Math.min(img.naturalWidth, state.canvasWidth * 0.8);
+        let layerHeight = layerWidth * ratio;
+        if (layerHeight > state.canvasHeight * 0.8) {
+          layerHeight = state.canvasHeight * 0.8;
+          layerWidth = layerHeight / ratio;
+        }
+        layerWidth = Math.round(layerWidth);
+        layerHeight = Math.round(layerHeight);
         addTextLayer({
           elementType: 'image',
           text: url.split('/').pop() || 'Image',
@@ -303,7 +308,7 @@ export function SpecialEditor() {
       dispatch({ type: 'SET_BACKGROUND', url });
       toast.success('Background set from library');
     }
-  }, [libraryMode, dispatch, addTextLayer, state.canvasWidth]);
+  }, [libraryMode, dispatch, addTextLayer, state.canvasWidth, state.canvasHeight]);
 
   /** Convert background image into a full image layer (move, resize, blend, etc.) */
   const handleConvertBgToLayer = useCallback(() => {
@@ -530,10 +535,15 @@ export function SpecialEditor() {
       video.onloadedmetadata = () => {
         const naturalW = video.videoWidth;
         const naturalH = video.videoHeight;
-        const maxWidth = Math.min(naturalW, state.canvasWidth * 0.8);
         const ratio = naturalH / naturalW;
-        const layerWidth = Math.round(maxWidth);
-        const layerHeight = Math.round(maxWidth * ratio);
+        let layerWidth = Math.min(naturalW, state.canvasWidth * 0.8);
+        let layerHeight = layerWidth * ratio;
+        if (layerHeight > state.canvasHeight * 0.8) {
+          layerHeight = state.canvasHeight * 0.8;
+          layerWidth = layerHeight / ratio;
+        }
+        layerWidth = Math.round(layerWidth);
+        layerHeight = Math.round(layerHeight);
 
         // Seek to capture a poster frame
         video.currentTime = 0.1;
@@ -572,10 +582,15 @@ export function SpecialEditor() {
       const blobUrl = URL.createObjectURL(file);
       const img = new window.Image();
       img.onload = () => {
-        const maxWidth = Math.min(img.naturalWidth, state.canvasWidth * 0.8);
         const ratio = img.naturalHeight / img.naturalWidth;
-        const layerWidth = Math.round(maxWidth);
-        const layerHeight = Math.round(maxWidth * ratio);
+        let layerWidth = Math.min(img.naturalWidth, state.canvasWidth * 0.8);
+        let layerHeight = layerWidth * ratio;
+        if (layerHeight > state.canvasHeight * 0.8) {
+          layerHeight = state.canvasHeight * 0.8;
+          layerWidth = layerHeight / ratio;
+        }
+        layerWidth = Math.round(layerWidth);
+        layerHeight = Math.round(layerHeight);
 
         addTextLayer({
           elementType: 'image',
@@ -1126,7 +1141,7 @@ export function SpecialEditor() {
           />
 
           {/* Empty canvas onboarding */}
-          {state.layers.length === 0 && !state.backgroundImage && (
+          {state.layers.length === 0 && !state.backgroundImage && !state.backgroundGradient && state.backgroundColor === '#1a1a2e' && (
             <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
               <div className="text-center pointer-events-auto">
                 <Sparkles size={36} className="mx-auto text-text-muted mb-3" />
