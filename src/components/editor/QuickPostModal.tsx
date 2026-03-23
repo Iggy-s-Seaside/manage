@@ -157,7 +157,6 @@ export function QuickPostModal({ open, onClose, onSaved }: QuickPostModalProps) 
 
   const resetState = () => {
     setStep('photo');
-    setImageFile(null);
     setImagePreview(null);
     setOverlayText('');
     setTextStyleIndex(0);
