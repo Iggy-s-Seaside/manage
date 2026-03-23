@@ -22,7 +22,6 @@ const TEXT_STYLES = [
 
 export function QuickPostModal({ open, onClose, onSaved }: QuickPostModalProps) {
   const [step, setStep] = useState<Step>('photo');
-  const [, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [overlayText, setOverlayText] = useState('');
   const [textStyleIndex, setTextStyleIndex] = useState(0);
@@ -42,7 +41,6 @@ export function QuickPostModal({ open, onClose, onSaved }: QuickPostModalProps) 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageFile(file);
     const reader = new FileReader();
     reader.onload = (ev) => {
       setImagePreview(ev.target?.result as string);

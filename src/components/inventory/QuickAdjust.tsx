@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Minus, Plus, Check } from 'lucide-react';
 import type { InventoryItem } from '../../types';
 import { LOG_REASONS } from '../../types';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 interface QuickAdjustProps {
   item: InventoryItem;
@@ -16,17 +17,7 @@ export function QuickAdjust({ item, onAdjust }: QuickAdjustProps) {
   const [submitting, setSubmitting] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
+  useClickOutside(popoverRef, useCallback(() => setOpen(false), []), open);
 
   const handleOpen = (dir: '+' | '-') => {
     setDirection(dir);

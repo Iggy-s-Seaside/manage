@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
-/** Allowed MIME types for upload */
+/** Maximum file sizes */
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
+
+/** Allowed MIME types for upload (SVG excluded — can contain embedded scripts) */
 const ALLOWED_IMAGE_TYPES = new Set([
-  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
 ]);
 const ALLOWED_VIDEO_TYPES = new Set([
   'video/mp4', 'video/webm', 'video/quicktime',
@@ -21,12 +25,9 @@ const MAGIC_BYTES: [Uint8Array, string][] = [
 
 /**
  * Validate file content against magic bytes.
- * Returns true if the file header matches a known safe format,
- * or if format can't be verified (SVG, MOV) — those rely on MIME check.
+ * Returns true if the file header matches a known safe format.
  */
 async function validateFileContent(file: File): Promise<boolean> {
-  // SVG is text-based, no magic bytes — trust MIME type
-  if (file.type === 'image/svg+xml') return true;
   // QuickTime/MOV uses ftyp box at offset 4, complex to parse — trust MIME
   if (file.type === 'video/quicktime') return true;
 
@@ -56,10 +57,20 @@ export function useImageUpload() {
   const [uploading, setUploading] = useState(false);
 
   const upload = async (file: File, folder = 'specials'): Promise<string | null> => {
+    const isImage = ALLOWED_IMAGE_TYPES.has(file.type);
+    const isVideo = ALLOWED_VIDEO_TYPES.has(file.type);
+
     // Validate MIME type
-    const isAllowed = ALLOWED_IMAGE_TYPES.has(file.type) || ALLOWED_VIDEO_TYPES.has(file.type);
-    if (!isAllowed) {
+    if (!isImage && !isVideo) {
       toast.error(`File type "${file.type}" is not allowed`);
+      return null;
+    }
+
+    // Validate file size
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    if (file.size > maxSize) {
+      const limitMB = Math.round(maxSize / (1024 * 1024));
+      toast.error(`File must be under ${limitMB} MB`);
       return null;
     }
 
@@ -75,7 +86,7 @@ export function useImageUpload() {
     // Derive extension from MIME type (not filename) to prevent path traversal
     const extMap: Record<string, string> = {
       'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
-      'image/gif': 'gif', 'image/svg+xml': 'svg',
+      'image/gif': 'gif',
       'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
     };
     const ext = extMap[file.type] || 'bin';
@@ -88,7 +99,7 @@ export function useImageUpload() {
     });
 
     if (error) {
-      toast.error(`Upload failed: ${error.message}`);
+      toast.error('Upload failed. Please try again.');
       setUploading(false);
       return null;
     }

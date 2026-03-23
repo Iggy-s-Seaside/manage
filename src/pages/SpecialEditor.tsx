@@ -463,65 +463,71 @@ export function SpecialEditor() {
   const handleSave = async () => {
     setSaving(true);
 
-    dispatch({ type: 'SELECT_LAYER', id: null });
-    await new Promise((r) => setTimeout(r, 150));
+    try {
+      dispatch({ type: 'SELECT_LAYER', id: null });
+      await new Promise((r) => setTimeout(r, 150));
 
-    const dataUrl = canvasRef.current?.exportImage();
-    let imageUrl: string | null = null;
-    let imageFile: File | null = null;
+      const dataUrl = canvasRef.current?.exportImage();
+      let imageUrl: string | null = null;
+      let imageFile: File | null = null;
 
-    if (dataUrl) {
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      imageFile = new File([blob], `iggy-special-${Date.now()}.png`, { type: 'image/png' });
-      imageUrl = await upload(imageFile, 'specials');
-    }
-
-    const payload = {
-      title: saveForm.title,
-      description: saveForm.description,
-      type: saveForm.type,
-      price: saveForm.price || null,
-      image_url: imageUrl,
-      active: publishOptions.postToWebsite,
-    };
-
-    const ok = isEdit
-      ? await update(Number(id), payload)
-      : await create(payload as Omit<Special, 'id' | 'created_at'>);
-
-    setSaving(false);
-    if (ok) {
-      // Toast feedback
-      const actions: string[] = [];
-      if (publishOptions.postToWebsite) actions.push('posted to website');
-      if (publishOptions.shareToInstagram) actions.push('sharing to Instagram');
-      toast.success(actions.length > 0
-        ? `Special saved & ${actions.join(' & ')}!`
-        : 'Special saved!');
-
-      // Instagram share: open native share sheet (or download on desktop)
-      if (publishOptions.shareToInstagram && imageFile) {
-        if (navigator.share && navigator.canShare?.({ files: [imageFile] })) {
-          try {
-            await navigator.share({ files: [imageFile] });
-          } catch {
-            // User cancelled share — that's fine, special is already saved
-          }
-        } else if (dataUrl) {
-          // Desktop fallback: download the image
-          const link = document.createElement('a');
-          link.download = imageFile.name;
-          link.href = dataUrl;
-          link.click();
-          toast.success('Image downloaded for Instagram!');
-        }
+      if (dataUrl) {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        imageFile = new File([blob], `iggy-special-${Date.now()}.png`, { type: 'image/png' });
+        imageUrl = await upload(imageFile, 'specials');
       }
 
-      clearDraft();
-      setHasUnsavedChanges(false);
-      setSaveModalOpen(false);
-      navigate('/specials');
+      const payload = {
+        title: saveForm.title,
+        description: saveForm.description,
+        type: saveForm.type,
+        price: saveForm.price || null,
+        image_url: imageUrl,
+        active: publishOptions.postToWebsite,
+      };
+
+      const ok = isEdit
+        ? await update(Number(id), payload)
+        : await create(payload as Omit<Special, 'id' | 'created_at'>);
+
+      if (ok) {
+        // Toast feedback
+        const actions: string[] = [];
+        if (publishOptions.postToWebsite) actions.push('posted to website');
+        if (publishOptions.shareToInstagram) actions.push('sharing to Instagram');
+        toast.success(actions.length > 0
+          ? `Special saved & ${actions.join(' & ')}!`
+          : 'Special saved!');
+
+        // Instagram share: open native share sheet (or download on desktop)
+        if (publishOptions.shareToInstagram && imageFile) {
+          if (navigator.share && navigator.canShare?.({ files: [imageFile] })) {
+            try {
+              await navigator.share({ files: [imageFile] });
+            } catch {
+              // User cancelled share — that's fine, special is already saved
+            }
+          } else if (dataUrl) {
+            // Desktop fallback: download the image
+            const link = document.createElement('a');
+            link.download = imageFile.name;
+            link.href = dataUrl;
+            link.click();
+            toast.success('Image downloaded for Instagram!');
+          }
+        }
+
+        clearDraft();
+        setHasUnsavedChanges(false);
+        setSaveModalOpen(false);
+        navigate('/specials');
+      }
+    } catch (error) {
+      console.error('[handleSave]', error);
+      toast.error('Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 

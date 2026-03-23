@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { EDITOR_FONTS } from '../../types';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 interface FontPickerProps {
   value: string;
@@ -11,17 +12,7 @@ export function FontPicker({ value, onChange }: FontPickerProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close on click outside
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  useClickOutside(containerRef, useCallback(() => setOpen(false), []), open);
 
   // Close on escape — stop propagation so the page-level Escape handler
   // (which deselects the layer) doesn't also fire.

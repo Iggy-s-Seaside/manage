@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { CalendarPlus, ChevronDown } from 'lucide-react';
 import type { IggyEvent } from '../../types';
 import { generateGoogleCalendarUrl, downloadIcsFile } from '../../utils/calendarSync';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 interface AddToCalendarButtonProps {
   event: IggyEvent;
@@ -12,19 +13,7 @@ export function AddToCalendarButton({ event, className = '' }: AddToCalendarButt
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!open) return;
-
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
+  useClickOutside(containerRef, useCallback(() => setOpen(false), []), open);
 
   function handleGoogleCalendar() {
     window.open(generateGoogleCalendarUrl(event), '_blank', 'noopener');
