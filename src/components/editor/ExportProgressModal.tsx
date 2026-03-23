@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { X, Download, Share2, Loader2 } from 'lucide-react';
+import { X, Download, Loader2 } from 'lucide-react';
 
 interface ExportProgressModalProps {
   /** 0 to 1 */
@@ -26,7 +26,7 @@ export const ExportProgressModal = memo<ExportProgressModalProps>(({
 }) => {
   const pct = Math.round(progress * 100);
 
-  const handleDownload = () => {
+  const downloadViaLink = () => {
     if (!blob) return;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -36,22 +36,23 @@ export const ExportProgressModal = memo<ExportProgressModalProps>(({
     URL.revokeObjectURL(url);
   };
 
-  const handleShare = async () => {
+  const handleSave = async () => {
     if (!blob) return;
-    const file = new File([blob], `iggy-special.${format}`, {
-      type: format === 'gif' ? 'image/gif' : 'video/webm',
-    });
+    const mimeType = format === 'gif' ? 'image/gif' : 'video/webm';
+    const file = new File([blob], `iggy-special-${Date.now()}.${format}`, { type: mimeType });
 
+    // Use Web Share API on mobile (iOS Safari ignores <a download>)
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ files: [file] });
       } catch {
-        // User cancelled share — not an error
+        // User cancelled share sheet — not an error
       }
-    } else {
-      // Fallback to download
-      handleDownload();
+      return;
     }
+
+    // Desktop fallback
+    downloadViaLink();
   };
 
   return (
@@ -111,19 +112,11 @@ export const ExportProgressModal = memo<ExportProgressModalProps>(({
 
             <div className="flex gap-2">
               <button
-                onClick={handleDownload}
+                onClick={handleSave}
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
               >
-                <Download size={14} /> Download
+                <Download size={14} /> Save
               </button>
-              {typeof navigator.share === 'function' && (
-                <button
-                  onClick={handleShare}
-                  className="btn-secondary flex-1 flex items-center justify-center gap-2"
-                >
-                  <Share2 size={14} /> Share
-                </button>
-              )}
             </div>
           </>
         )}

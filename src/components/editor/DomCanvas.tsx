@@ -177,6 +177,27 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
   const panX = gestures.currentPanX;
   const panY = gestures.currentPanY;
 
+  // On mobile, compute centered position via CSS left/top instead of transform translate.
+  // This makes it physically impossible for the canvas to fly off-screen.
+  const isMobileView = gestures.viewportHandlers.onPointerDown === undefined; // mobile returns empty handlers
+
+  // Mobile: calculate centered position using viewport dimensions
+  const getMobilePosition = () => {
+    if (!isMobileView || !viewportRef.current) return { left: 0, top: 4 };
+    const vw = viewportRef.current.clientWidth;
+    const vh = viewportRef.current.clientHeight;
+    const scaledW = state.canvasWidth * zoom;
+    const scaledH = state.canvasHeight * zoom;
+    const toolbarH = 60;
+    const visibleH = vh - toolbarH;
+    return {
+      left: Math.max(0, (vw - scaledW) / 2),
+      top: Math.max(4, (visibleH - scaledH) / 2),
+    };
+  };
+
+  const mobilePos = isMobileView ? getMobilePosition() : null;
+
   return (
     <div
       ref={viewportRef}
@@ -188,12 +209,23 @@ export const DomCanvas = memo(forwardRef<DomCanvasHandle, DomCanvasProps>(({
       <div
         ref={contentRef}
         className="absolute origin-top-left"
-        style={{
-          width: state.canvasWidth,
-          height: state.canvasHeight,
-          transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-          transformOrigin: '0 0',
-        }}
+        style={
+          isMobileView
+            ? {
+                width: state.canvasWidth,
+                height: state.canvasHeight,
+                left: mobilePos!.left,
+                top: mobilePos!.top,
+                transform: `scale(${zoom})`,
+                transformOrigin: '0 0',
+              }
+            : {
+                width: state.canvasWidth,
+                height: state.canvasHeight,
+                transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+                transformOrigin: '0 0',
+              }
+        }
         onPointerDown={handleBackgroundPointerDown}
       >
         {/* Background layer */}

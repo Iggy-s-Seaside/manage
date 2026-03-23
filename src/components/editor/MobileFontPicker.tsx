@@ -102,10 +102,6 @@ export const MobileFontPicker = memo(function MobileFontPicker({
         </div>
       </div>
 
-      <style>{`
-        @keyframes slideDownIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slideUpIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
     </div>
   );
 });

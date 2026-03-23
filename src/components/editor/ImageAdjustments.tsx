@@ -1,6 +1,7 @@
 import { Sun, Contrast, Droplets, CloudFog, RotateCcw, Palette, ArrowDownToLine } from 'lucide-react';
 import type { ImageFilters } from '../../types';
 import { FILTER_PRESETS } from '../../types';
+import { OVERLAY_COLORS } from './editorConstants';
 
 interface ImageAdjustmentsProps {
   filters: ImageFilters;
@@ -112,7 +113,7 @@ export function ImageAdjustments({ filters, hasBackground, onUpdate, onReset, on
 
         {/* Quick overlay colors */}
         <div className="flex gap-1">
-          {['#000000', '#1a1a2e', '#0d9488', '#f59e0b', '#ef4444', '#8b5cf6'].map((c) => (
+          {OVERLAY_COLORS.map((c) => (
             <button
               key={c}
               onClick={() => onUpdate({ overlayColor: c, overlayOpacity: Math.max(filters.overlayOpacity, 0.2), preset: null })}

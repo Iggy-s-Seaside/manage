@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react';
 import { Lock } from 'lucide-react';
 import type { TextLayer } from '../../types';
+import { MIN_TOUCH_TARGET } from './editorConstants';
 
 interface SnapLines {
   x: number[];
@@ -16,7 +17,7 @@ interface SelectionOverlayProps {
   onHandlePointerDown: (e: React.PointerEvent, handle: string) => void;
 }
 
-const MIN_TOUCH_HEIGHT = 44;
+const MIN_TOUCH_HEIGHT = MIN_TOUCH_TARGET;
 
 /** Estimate element height based on type */
 function estimateHeight(layer: TextLayer): number {

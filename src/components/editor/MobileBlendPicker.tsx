@@ -1,7 +1,9 @@
 import { memo, useState } from 'react';
-import { X, RotateCcw, Sun, Contrast, Droplets, CloudFog, Palette } from 'lucide-react';
-import type { TextLayer, ImageFilters } from '../../types';
+import { X, RotateCcw, Palette } from 'lucide-react';
+import type { TextLayer } from '../../types';
 import { DEFAULT_IMAGE_FILTERS } from '../../types';
+import { BLEND_MODES, SLIDER_CONFIG, OVERLAY_COLORS } from './editorConstants';
+import type { ActiveSlider } from './editorConstants';
 
 interface MobileBlendPickerProps {
   layer: TextLayer;
@@ -10,31 +12,6 @@ interface MobileBlendPickerProps {
   /** 0–1 ratio of where the element is on screen vertically */
   elementScreenY?: number;
 }
-
-const BLEND_MODES: { value: string; label: string; description: string }[] = [
-  { value: 'normal', label: 'Normal', description: 'No blending' },
-  { value: 'screen', label: 'Screen', description: 'Lighten & merge' },
-  { value: 'multiply', label: 'Multiply', description: 'Darken & merge' },
-  { value: 'overlay', label: 'Overlay', description: 'Contrast blend' },
-  { value: 'soft-light', label: 'Soft Light', description: 'Gentle glow' },
-  { value: 'hard-light', label: 'Hard Light', description: 'Strong glow' },
-  { value: 'difference', label: 'Difference', description: 'Invert colors' },
-  { value: 'exclusion', label: 'Exclusion', description: 'Soft invert' },
-  { value: 'color-dodge', label: 'Dodge', description: 'Brighten colors' },
-  { value: 'color-burn', label: 'Burn', description: 'Deepen colors' },
-  { value: 'luminosity', label: 'Luminosity', description: 'Light only' },
-  { value: 'darken', label: 'Darken', description: 'Keep darks' },
-  { value: 'lighten', label: 'Lighten', description: 'Keep lights' },
-];
-
-type ActiveSlider = 'brightness' | 'contrast' | 'saturation' | 'blur' | 'overlay' | null;
-
-const SLIDER_CONFIG: { id: ActiveSlider; icon: typeof Sun; label: string; key: keyof ImageFilters; min: number; max: number }[] = [
-  { id: 'brightness', icon: Sun, label: 'Bright', key: 'brightness', min: 0, max: 200 },
-  { id: 'contrast', icon: Contrast, label: 'Contrast', key: 'contrast', min: 0, max: 200 },
-  { id: 'saturation', icon: Droplets, label: 'Saturate', key: 'saturation', min: 0, max: 200 },
-  { id: 'blur', icon: CloudFog, label: 'Blur', key: 'blur', min: 0, max: 20 },
-];
 
 export const MobileBlendPicker = memo(function MobileBlendPicker({
   layer,
@@ -191,7 +168,7 @@ export const MobileBlendPicker = memo(function MobileBlendPicker({
               </span>
             </div>
             <div className="flex gap-1.5">
-              {['#000000', '#1a1a2e', '#0d9488', '#f59e0b', '#ef4444', '#8b5cf6'].map((c) => (
+              {OVERLAY_COLORS.map((c) => (
                 <button
                   key={c}
                   onClick={() => onUpdate({ imageFilters: { ...filters, overlayColor: c, overlayOpacity: Math.max(filters.overlayOpacity, 0.2) } })}
@@ -205,12 +182,6 @@ export const MobileBlendPicker = memo(function MobileBlendPicker({
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes slideDownIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slideUpIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
     </div>
   );
 });

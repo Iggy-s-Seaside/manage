@@ -1,8 +1,6 @@
 import { memo, useRef, useCallback, useEffect } from 'react';
 import type { TextLayer } from '../../types';
-
-/** Minimum touch target size in screen pixels (Apple HIG) */
-const MIN_TOUCH_TARGET = 44;
+import { MIN_TOUCH_TARGET } from './editorConstants';
 
 interface TextElementProps {
   layer: TextLayer;

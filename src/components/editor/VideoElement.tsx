@@ -2,26 +2,14 @@ import { memo, useCallback, useRef, useEffect, useState } from 'react';
 import type { TextLayer } from '../../types';
 import { useVideoRefs } from '../../context/VideoRefContext';
 import { resolveMediaSrc, revokeMediaUrl, isIdbRef } from '../../lib/mediaStore';
-
-/** Minimum touch target size in screen pixels (Apple HIG) */
-const MIN_TOUCH_TARGET = 44;
+import { buildFilterCSS } from './canvasUtils';
+import { MIN_TOUCH_TARGET } from './editorConstants';
 
 interface VideoElementProps {
   layer: TextLayer;
   isSelected: boolean;
   onPointerDown?: (e: React.PointerEvent, layerId: string) => void;
   zoom?: number;
-}
-
-/** Build CSS filter string from ImageFilters */
-function buildFilterCSS(filters?: TextLayer['imageFilters']): string | undefined {
-  if (!filters) return undefined;
-  const parts: string[] = [];
-  if (filters.brightness !== 100) parts.push(`brightness(${filters.brightness}%)`);
-  if (filters.contrast !== 100) parts.push(`contrast(${filters.contrast}%)`);
-  if (filters.saturation !== 100) parts.push(`saturate(${filters.saturation}%)`);
-  if (filters.blur > 0) parts.push(`blur(${filters.blur}px)`);
-  return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
 export const VideoElement = memo<VideoElementProps>(({

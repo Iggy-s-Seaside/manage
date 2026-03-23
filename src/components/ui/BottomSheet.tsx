@@ -291,9 +291,8 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
         </div>
       </div>
 
-      {/* Inline keyframes */}
+      {/* Sheet-specific keyframes (fadeIn is in index.css) */}
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
         @keyframes slideUpSmall { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }

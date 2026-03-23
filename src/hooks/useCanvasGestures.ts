@@ -24,9 +24,20 @@ export function useCanvasGestures({
   isEditing,
   onZoomChange,
 }: UseCanvasGesturesOptions) {
-  // Detect mobile once
-  const isMobile = typeof window !== 'undefined'
-    && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  // Detect mobile via viewport width — matches the CSS md: breakpoint.
+  // Touch-API detection is unreliable (some mobile browsers report no touch),
+  // but screen width is the real constraint: small screens must never pan/zoom.
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mql.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   // All animation state in refs for 60fps — NO useState during gestures
   const zoomRef = useRef(baseScale);
@@ -57,22 +68,23 @@ export function useCanvasGestures({
   // Center canvas in viewport
   const centerCanvas = useCallback((zoom: number) => {
     if (!viewportRef.current) return;
+    // On mobile, CSS left/top handles centering — no transform translate needed.
+    if (isMobile) {
+      panXRef.current = 0;
+      panYRef.current = 0;
+      applyTransform();
+      return;
+    }
     const vw = viewportRef.current.clientWidth;
     const vh = viewportRef.current.clientHeight;
     const scaledW = canvasWidth * zoom;
     const scaledH = canvasHeight * zoom;
     const px = (vw - scaledW) / 2;
-    // On mobile, push canvas to top so it's fully visible above toolbar
-    const mobileCheck = vw < 768;
-    const toolbarHeight = mobileCheck ? 60 : 0;
-    const visibleH = vh - toolbarHeight;
-    const py = mobileCheck
-      ? Math.max(4, (visibleH - scaledH) / 2)
-      : (vh - scaledH) / 2;
+    const py = (vh - scaledH) / 2;
     panXRef.current = px;
     panYRef.current = py;
     applyTransform();
-  }, [viewportRef, canvasWidth, canvasHeight, applyTransform]);
+  }, [viewportRef, canvasWidth, canvasHeight, applyTransform, isMobile]);
 
   // Keep refs to always-current functions (avoids stale closures in the effect below)
   const centerCanvasRef = useRef(centerCanvas);
@@ -88,42 +100,24 @@ export function useCanvasGestures({
   }, [baseScale, canvasWidth, canvasHeight]);
 
   // ══════════════════════════════════════════════════════════════════
-  // MOBILE: No gesture handling at all.
-  // Canvas stays auto-fit and centered. Can never be lost.
+  // Desktop pan refs (always declared to satisfy Rules of Hooks)
   // ══════════════════════════════════════════════════════════════════
-  if (isMobile) {
-    return {
-      currentZoom,
-      currentPanX,
-      currentPanY,
-      isGesturing: false,
-      viewportHandlers: {},
-    };
-  }
-
-  // ══════════════════════════════════════════════════════════════════
-  // DESKTOP ONLY: Pan & zoom gestures via mouse
-  // ══════════════════════════════════════════════════════════════════
-
-  // Desktop pan (mouse drag when no element selected)
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef({ x: 0, y: 0 });
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (isMobile) return;
     if (isEditing) return;
     if (hasSelectedElement) return;
-
-    // Single-pointer pan on desktop
     if (e.pointerType === 'mouse') {
       isPanningRef.current = true;
       lastPanPointRef.current = { x: e.clientX, y: e.clientY };
       setIsGesturing(true);
     }
-  }, [hasSelectedElement, isEditing]);
+  }, [isMobile, hasSelectedElement, isEditing]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isPanningRef.current) return;
-
     const dx = e.clientX - lastPanPointRef.current.x;
     const dy = e.clientY - lastPanPointRef.current.y;
     panXRef.current += dx;
@@ -135,7 +129,6 @@ export function useCanvasGestures({
   const handlePointerUp = useCallback(() => {
     if (!isPanningRef.current) return;
     isPanningRef.current = false;
-
     // Clamp pan so canvas can't go fully off-screen
     if (viewportRef.current) {
       const vw = viewportRef.current.clientWidth;
@@ -151,7 +144,6 @@ export function useCanvasGestures({
       panYRef.current = Math.max(minPanY, Math.min(panYRef.current, maxPanY));
       applyTransform();
     }
-
     setIsGesturing(false);
     commitToState();
   }, [applyTransform, commitToState, viewportRef, canvasWidth, canvasHeight]);
@@ -163,6 +155,7 @@ export function useCanvasGestures({
 
   // Desktop mouse wheel zoom
   useEffect(() => {
+    if (isMobile) return;
     const viewport = viewportRef.current;
     if (!viewport) return;
 
@@ -188,7 +181,18 @@ export function useCanvasGestures({
 
     viewport.addEventListener('wheel', handleWheel, { passive: false });
     return () => viewport.removeEventListener('wheel', handleWheel);
-  }, [viewportRef, applyTransform, commitToState]);
+  }, [isMobile, viewportRef, applyTransform, commitToState]);
+
+  // On mobile, return empty handlers (no pan/zoom possible)
+  if (isMobile) {
+    return {
+      currentZoom,
+      currentPanX,
+      currentPanY,
+      isGesturing: false,
+      viewportHandlers: {},
+    };
+  }
 
   return {
     currentZoom,

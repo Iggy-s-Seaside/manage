@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Undo2, Redo2, Download, Save, Upload, RectangleVertical, RectangleHorizontal, Square,
-  Loader2, Image, Sliders, Type, Heading1, Heading2, Tag, Megaphone, ZoomIn, ZoomOut, Maximize,
-  LayoutTemplate, Ruler, Minus, Sparkles
+  Loader2, Image, Sliders, ZoomIn, ZoomOut, Maximize,
+  LayoutTemplate, Ruler, Sparkles, Type, Globe, Instagram
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DomCanvas, type DomCanvasHandle } from '../components/editor/DomCanvas';
@@ -22,10 +22,6 @@ import { useEditorState } from '../hooks/useEditorState';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { useSupabaseCRUD } from '../hooks/useSupabaseCRUD';
 import { useDraftPersistence } from '../hooks/useDraftPersistence';
-// useTouchCanvas removed — browser/CSS zoom on the canvas wrapper caused the
-// entire UI to scale and "disappear".  The Canvas component already handles its
-// own internal fit-to-container scaling.  Browser pinch-zoom is blocked via
-// touch-action CSS on the editor container.
 import { TEMPLATES } from '../data/templates';
 import type { Special, TextLayer, UserTemplate } from '../types';
 import { DEFAULT_IMAGE_FILTERS } from '../types';
@@ -35,17 +31,8 @@ import { useMediaSync } from '../hooks/useMediaSync';
 import { exportToGif } from '../components/editor/exportToGif';
 import { ExportProgressModal } from '../components/editor/ExportProgressModal';
 import { GradientPicker } from '../components/editor/GradientPicker';
+import { TEXT_PRESETS } from '../components/editor/editorConstants';
 import { findContrastIssues } from '../utils/colorContrast';
-
-// Text presets for quick add
-const TEXT_PRESETS = [
-  { label: 'Heading', icon: Heading1, overrides: { text: 'HEADING', fontSize: 96, fontFamily: 'Bebas Neue', fontStyle: 'bold', fill: '#ffffff', letterSpacing: 4 } },
-  { label: 'Subtitle', icon: Heading2, overrides: { text: 'Subtitle text', fontSize: 36, fontFamily: 'Montserrat', fill: '#94a3b8', letterSpacing: 2 } },
-  { label: 'Item', icon: Type, overrides: { text: '$5 ITEM NAME', fontSize: 36, fontFamily: 'Oswald', fontStyle: 'bold', fill: '#ffffff', align: 'center' as const, letterSpacing: 1 } },
-  { label: 'Price', icon: Tag, overrides: { text: '$5', fontSize: 72, fontFamily: 'Anton', fill: '#f59e0b', fontStyle: 'bold' } },
-  { label: 'CTA', icon: Megaphone, overrides: { text: 'JOIN US!', fontSize: 48, fontFamily: 'Oswald', fill: '#2dd4bf', fontStyle: 'bold', letterSpacing: 3 } },
-  { label: 'Divider', icon: Minus, overrides: { elementType: 'divider' as const, text: 'SECTION', dividerLabel: 'SECTION', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.4, dividerLineThickness: 1, dividerPadding: 40, dividerGap: 16, width: 1080 } },
-];
 
 type RightTab = 'properties' | 'adjustments';
 type MobileSheet = 'layers' | 'properties' | 'adjustments' | 'templates' | null;
@@ -129,32 +116,15 @@ export function SpecialEditor() {
     type: 'drink' as 'drink' | 'food' | 'seasonal',
     price: '',
   });
+  const [publishOptions, setPublishOptions] = useState({
+    postToWebsite: true,
+    shareToInstagram: false,
+  });
 
   const isEdit = Boolean(id);
 
   // Draft persistence
   const { loadDraft, clearDraft, hasDraft } = useDraftPersistence(id, state, saveForm);
-
-  // Keyboard shortcuts: Cmd/Ctrl+Z for undo, Cmd/Ctrl+Shift+Z for redo, Delete/Backspace for delete
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) {
-          dispatch({ type: 'REDO' });
-        } else {
-          dispatch({ type: 'UNDO' });
-        }
-      }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedLayerId) {
-        e.preventDefault();
-        dispatch({ type: 'REMOVE_LAYER', id: state.selectedLayerId });
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [dispatch, state.selectedLayerId]);
 
   // Warn on browser close/refresh with unsaved changes
   useEffect(() => {
@@ -267,6 +237,20 @@ export function SpecialEditor() {
   const handleBgUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validate file type (don't trust accept= attribute alone)
+    if (!file.type.startsWith('image/')) {
+      toast.error('Background must be an image file');
+      if (bgInputRef.current) bgInputRef.current.value = '';
+      return;
+    }
+    // Enforce 10 MB size limit
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be under 10 MB');
+      if (bgInputRef.current) bgInputRef.current.value = '';
+      return;
+    }
+
     const url = await upload(file, 'editor-bg');
     if (url) {
       dispatch({ type: 'SET_BACKGROUND', url });
@@ -411,19 +395,39 @@ export function SpecialEditor() {
     }
   }, [state.layers, state.canvasWidth, state.canvasHeight, dispatch]);
 
-  const handleExport = useCallback((format: 'png' | 'jpeg' = 'png', quality = 92) => {
+  const handleExport = useCallback(async (format: 'png' | 'jpeg' = 'png', quality = 92) => {
     dispatch({ type: 'SELECT_LAYER', id: null });
-    setTimeout(() => {
-      const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
-      const ext = format === 'jpeg' ? 'jpg' : 'png';
-      const dataUrl = canvasRef.current?.exportImage(mimeType, quality / 100);
-      if (!dataUrl) return;
-      const link = document.createElement('a');
-      link.download = `iggy-special-${Date.now()}.${ext}`;
-      link.href = dataUrl;
-      link.click();
-      toast.success(`Image exported as ${ext.toUpperCase()}!`);
-    }, 100);
+
+    // Wait for deselection render
+    await new Promise((r) => setTimeout(r, 100));
+
+    const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    const ext = format === 'jpeg' ? 'jpg' : 'png';
+    const dataUrl = canvasRef.current?.exportImage(mimeType, quality / 100);
+    if (!dataUrl) return;
+
+    // Convert data URL to blob
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], `iggy-special-${Date.now()}.${ext}`, { type: mimeType });
+
+    // Use Web Share API on mobile (iOS Safari ignores <a download>)
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+        toast.success(`Image ready to save!`);
+      } catch {
+        // User cancelled share sheet — not an error
+      }
+      return;
+    }
+
+    // Desktop fallback: <a download> works on Chrome/Firefox/Edge
+    const link = document.createElement('a');
+    link.download = file.name;
+    link.href = dataUrl;
+    link.click();
+    toast.success(`Image exported as ${ext.toUpperCase()}!`);
   }, [dispatch]);
 
   const handleExportGif = useCallback(async () => {
@@ -464,12 +468,13 @@ export function SpecialEditor() {
 
     const dataUrl = canvasRef.current?.exportImage();
     let imageUrl: string | null = null;
+    let imageFile: File | null = null;
 
     if (dataUrl) {
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-      const file = new File([blob], `special-${Date.now()}.png`, { type: 'image/png' });
-      imageUrl = await upload(file, 'specials');
+      imageFile = new File([blob], `iggy-special-${Date.now()}.png`, { type: 'image/png' });
+      imageUrl = await upload(imageFile, 'specials');
     }
 
     const payload = {
@@ -478,7 +483,7 @@ export function SpecialEditor() {
       type: saveForm.type,
       price: saveForm.price || null,
       image_url: imageUrl,
-      active: true,
+      active: publishOptions.postToWebsite,
     };
 
     const ok = isEdit
@@ -487,6 +492,32 @@ export function SpecialEditor() {
 
     setSaving(false);
     if (ok) {
+      // Toast feedback
+      const actions: string[] = [];
+      if (publishOptions.postToWebsite) actions.push('posted to website');
+      if (publishOptions.shareToInstagram) actions.push('sharing to Instagram');
+      toast.success(actions.length > 0
+        ? `Special saved & ${actions.join(' & ')}!`
+        : 'Special saved!');
+
+      // Instagram share: open native share sheet (or download on desktop)
+      if (publishOptions.shareToInstagram && imageFile) {
+        if (navigator.share && navigator.canShare?.({ files: [imageFile] })) {
+          try {
+            await navigator.share({ files: [imageFile] });
+          } catch {
+            // User cancelled share — that's fine, special is already saved
+          }
+        } else if (dataUrl) {
+          // Desktop fallback: download the image
+          const link = document.createElement('a');
+          link.download = imageFile.name;
+          link.href = dataUrl;
+          link.click();
+          toast.success('Image downloaded for Instagram!');
+        }
+      }
+
       clearDraft();
       setHasUnsavedChanges(false);
       setSaveModalOpen(false);
@@ -1234,7 +1265,6 @@ export function SpecialEditor() {
         onOpenFontPicker={() => { closeAllOverlays(); setMobileFontPickerOpen(true); }}
         onOpenBlendPicker={() => { closeAllOverlays(); setMobileBlendPickerOpen(true); }}
         onCloseOverlays={closeAllOverlays}
-        onOpenAdjustments={() => { closeAllOverlays(); setMobileFiltersOpen(true); }}
         onOpenTemplates={() => { closeAllOverlays(); setMobileSheet('templates'); }}
         onUndo={() => dispatch({ type: 'UNDO' })}
         onRedo={() => dispatch({ type: 'REDO' })}
@@ -1615,6 +1645,53 @@ export function SpecialEditor() {
               />
             </div>
           </div>
+          {/* Publish Options */}
+          <div className="border-t border-border pt-4 mt-1 space-y-3">
+            <p className="text-xs font-medium text-text-muted uppercase tracking-wide">Publish To</p>
+
+            {/* Post to Website */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={publishOptions.postToWebsite}
+                onClick={() => setPublishOptions(p => ({ ...p, postToWebsite: !p.postToWebsite }))}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                  publishOptions.postToWebsite ? 'bg-primary' : 'bg-surface-hover'
+                }`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                  publishOptions.postToWebsite ? 'translate-x-5' : ''
+                }`} />
+              </button>
+              <Globe size={18} className={publishOptions.postToWebsite ? 'text-primary' : 'text-text-muted'} />
+              <span className="text-sm text-text-primary">Post to Website</span>
+            </label>
+
+            {/* Share to Instagram */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={publishOptions.shareToInstagram}
+                onClick={() => setPublishOptions(p => ({ ...p, shareToInstagram: !p.shareToInstagram }))}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                  publishOptions.shareToInstagram
+                    ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400'
+                    : 'bg-surface-hover'
+                }`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                  publishOptions.shareToInstagram ? 'translate-x-5' : ''
+                }`} />
+              </button>
+              <Instagram size={18} className={publishOptions.shareToInstagram ? 'text-pink-400' : 'text-text-muted'} />
+              <span className="text-sm text-text-primary">
+                {typeof navigator !== 'undefined' && navigator.share ? 'Share to Instagram' : 'Download for Instagram'}
+              </span>
+            </label>
+          </div>
+
           <div className="flex gap-3 justify-end pt-2">
             <button onClick={() => setSaveModalOpen(false)} className="btn-secondary">Cancel</button>
             <button
@@ -1623,7 +1700,19 @@ export function SpecialEditor() {
               className="btn-primary"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              {isEdit ? 'Update' : 'Save'}
+              {(() => {
+                const { postToWebsite, shareToInstagram } = publishOptions;
+                if (isEdit) {
+                  if (postToWebsite && shareToInstagram) return 'Update, Post & Share';
+                  if (postToWebsite) return 'Update & Post';
+                  if (shareToInstagram) return 'Update & Share';
+                  return 'Update';
+                }
+                if (postToWebsite && shareToInstagram) return 'Save, Post & Share';
+                if (postToWebsite) return 'Save & Post';
+                if (shareToInstagram) return 'Save & Share';
+                return 'Save';
+              })()}
             </button>
           </div>
           <div className="border-t border-border mt-4 pt-3 text-center">

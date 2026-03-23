@@ -25,22 +25,7 @@ function toHex(color: string): string {
   return '#000000';
 }
 
-// Blend modes for Enlight-style double exposure
-const BLEND_MODES = [
-  { value: 'normal', label: 'Normal' },
-  { value: 'screen', label: 'Screen' },
-  { value: 'multiply', label: 'Multiply' },
-  { value: 'overlay', label: 'Overlay' },
-  { value: 'soft-light', label: 'Soft Light' },
-  { value: 'hard-light', label: 'Hard Light' },
-  { value: 'difference', label: 'Difference' },
-  { value: 'exclusion', label: 'Exclusion' },
-  { value: 'color-dodge', label: 'Color Dodge' },
-  { value: 'color-burn', label: 'Color Burn' },
-  { value: 'luminosity', label: 'Luminosity' },
-  { value: 'darken', label: 'Darken' },
-  { value: 'lighten', label: 'Lighten' },
-];
+import { BLEND_MODES } from './editorConstants';
 
 // Reusable slider row with label and live value
 function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }: {

@@ -1,7 +1,9 @@
 import { useState, memo } from 'react';
-import { X, Sun, Contrast, Droplets, CloudFog, RotateCcw, Palette } from 'lucide-react';
+import { X, RotateCcw, Palette } from 'lucide-react';
 import type { ImageFilters } from '../../types';
 import { FILTER_PRESETS } from '../../types';
+import { SLIDER_CONFIG, OVERLAY_COLORS } from './editorConstants';
+import type { ActiveSlider } from './editorConstants';
 
 interface MobileFilterBarProps {
   filters: ImageFilters;
@@ -10,15 +12,6 @@ interface MobileFilterBarProps {
   onReset: () => void;
   onClose: () => void;
 }
-
-type ActiveSlider = 'brightness' | 'contrast' | 'saturation' | 'blur' | 'overlay' | null;
-
-const SLIDER_CONFIG: { id: ActiveSlider; icon: typeof Sun; label: string; key: keyof ImageFilters; min: number; max: number }[] = [
-  { id: 'brightness', icon: Sun, label: 'Brightness', key: 'brightness', min: 0, max: 200 },
-  { id: 'contrast', icon: Contrast, label: 'Contrast', key: 'contrast', min: 0, max: 200 },
-  { id: 'saturation', icon: Droplets, label: 'Saturation', key: 'saturation', min: 0, max: 200 },
-  { id: 'blur', icon: CloudFog, label: 'Blur', key: 'blur', min: 0, max: 20 },
-];
 
 export const MobileFilterBar = memo(function MobileFilterBar({
   filters,
@@ -44,7 +37,6 @@ export const MobileFilterBar = memo(function MobileFilterBar({
           </div>
           <p className="text-xs text-text-muted">Upload a background image to use filters</p>
         </div>
-        <style>{`@keyframes slideDownIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       </div>
     );
   }
@@ -178,7 +170,7 @@ export const MobileFilterBar = memo(function MobileFilterBar({
               </span>
             </div>
             <div className="flex gap-1.5">
-              {['#000000', '#1a1a2e', '#0d9488', '#f59e0b', '#ef4444', '#8b5cf6'].map((c) => (
+              {OVERLAY_COLORS.map((c) => (
                 <button
                   key={c}
                   onClick={() => onUpdate({ overlayColor: c, overlayOpacity: Math.max(filters.overlayOpacity, 0.2), preset: null })}
@@ -192,11 +184,6 @@ export const MobileFilterBar = memo(function MobileFilterBar({
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes slideDownIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
     </div>
   );
 });

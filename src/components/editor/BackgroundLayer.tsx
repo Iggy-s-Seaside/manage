@@ -1,15 +1,6 @@
 import { memo, useState } from 'react';
 import type { ImageFilters } from '../../types';
-
-/** Build CSS filter string from ImageFilters (ported from Canvas.tsx) */
-export function buildFilterString(filters: ImageFilters): string {
-  const parts: string[] = [];
-  if (filters.brightness !== 100) parts.push(`brightness(${filters.brightness}%)`);
-  if (filters.contrast !== 100) parts.push(`contrast(${filters.contrast}%)`);
-  if (filters.saturation !== 100) parts.push(`saturate(${filters.saturation}%)`);
-  if (filters.blur > 0) parts.push(`blur(${filters.blur}px)`);
-  return parts.length > 0 ? parts.join(' ') : 'none';
-}
+import { buildFilterString } from './canvasUtils';
 
 interface BackgroundLayerProps {
   backgroundColor: string;

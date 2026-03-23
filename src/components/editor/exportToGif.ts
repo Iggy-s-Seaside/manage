@@ -133,28 +133,5 @@ export async function exportToGif(
 
   // Convert to blob
   const bytes = gif.bytes();
-  return new Blob([new Uint8Array(bytes) as BlobPart], { type: 'image/gif' });
-}
-
-/**
- * Check if the current environment supports video export via MediaRecorder.
- */
-export function getExportCapabilities(): {
-  supportsVideoExport: boolean;
-  supportedFormats: string[];
-} {
-  if (typeof MediaRecorder === 'undefined') {
-    return { supportsVideoExport: false, supportedFormats: ['gif'] };
-  }
-
-  const formats = [
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-  ].filter((f) => MediaRecorder.isTypeSupported(f));
-
-  return {
-    supportsVideoExport: formats.length > 0,
-    supportedFormats: ['gif', ...formats],
-  };
+  return new Blob([new Uint8Array(bytes)], { type: 'image/gif' });
 }

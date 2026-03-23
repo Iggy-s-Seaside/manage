@@ -8,16 +8,7 @@ import {
 } from 'lucide-react';
 import type { TextLayer } from '../../types';
 import { GradientPicker } from './GradientPicker';
-
-// Same presets as SpecialEditor
-const TEXT_PRESETS = [
-  { label: 'Heading', overrides: { text: 'HEADING', fontSize: 96, fontFamily: 'Bebas Neue', fontStyle: 'bold', fill: '#ffffff', letterSpacing: 4 } },
-  { label: 'Subtitle', overrides: { text: 'Subtitle text', fontSize: 36, fontFamily: 'Montserrat', fill: '#94a3b8', letterSpacing: 2 } },
-  { label: 'Item', overrides: { text: '$5 ITEM NAME', fontSize: 36, fontFamily: 'Oswald', fontStyle: 'bold', fill: '#ffffff', align: 'center' as const, letterSpacing: 1 } },
-  { label: 'Price', overrides: { text: '$5', fontSize: 72, fontFamily: 'Anton', fill: '#f59e0b', fontStyle: 'bold' } },
-  { label: 'CTA', overrides: { text: 'JOIN US!', fontSize: 48, fontFamily: 'Oswald', fill: '#2dd4bf', fontStyle: 'bold', letterSpacing: 3 } },
-  { label: 'Divider', overrides: { elementType: 'divider' as const, text: 'SECTION', dividerLabel: 'SECTION', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 600, fill: '#2dd4bf', letterSpacing: 4, dividerLineColor: '#2dd4bf', dividerLineOpacity: 0.4, dividerLineThickness: 1, dividerPadding: 40, dividerGap: 16, width: 1080 } },
-];
+import { TEXT_PRESETS } from './editorConstants';
 
 interface MobileToolbarProps {
   onAddText: (overrides?: Partial<TextLayer>) => void;
@@ -30,7 +21,6 @@ interface MobileToolbarProps {
   onOpenFontPicker: () => void;
   onOpenBlendPicker: () => void;
   onCloseOverlays: () => void;
-  onOpenAdjustments: () => void;
   onOpenTemplates: () => void;
   onConvertBgToLayer?: () => void;
   onFitToCanvas?: () => void;
@@ -68,7 +58,6 @@ export const MobileToolbar = memo(function MobileToolbar({
   onOpenFontPicker,
   onOpenBlendPicker,
   onCloseOverlays,
-  onOpenAdjustments: _onOpenAdjustments,
   onOpenTemplates,
   onConvertBgToLayer,
   onFitToCanvas,
@@ -330,14 +319,8 @@ export const MobileToolbar = memo(function MobileToolbar({
         <ToolButton icon={MoreHorizontal} label="More" onClick={() => { if (!moreOpen) onCloseOverlays(); setMoreOpen(!moreOpen); setAddMenuOpen(false); }} active={moreOpen} />
       </div>
 
-      {/* Inline keyframes */}
+      {/* Toolbar-specific keyframe (shared ones are in index.css) */}
       <style>{`
-        @keyframes popUp {
-          0% { opacity: 0; transform: translateY(8px) scale(0.96); }
-          80% { opacity: 1; transform: translateY(-1px) scale(1.01); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes sheetSlideUp {
           from { transform: translateY(100%); }
           to { transform: translateY(0); }

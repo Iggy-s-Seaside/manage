@@ -37,7 +37,6 @@ export function useMessages() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
-          console.log('[Messages] Realtime INSERT:', payload);
           setMessages((prev) => [payload.new as Message, ...prev]);
           toast('New message received!', { icon: '📩' });
         }
@@ -46,7 +45,6 @@ export function useMessages() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'messages' },
         (payload) => {
-          console.log('[Messages] Realtime UPDATE:', payload);
           setMessages((prev) =>
             prev.map((m) => (m.id === (payload.new as Message).id ? payload.new as Message : m))
           );
@@ -56,13 +54,10 @@ export function useMessages() {
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'messages' },
         (payload) => {
-          console.log('[Messages] Realtime DELETE:', payload);
           setMessages((prev) => prev.filter((m) => m.id !== (payload.old as { id: number }).id));
         }
       )
-      .subscribe((status, err) => {
-        console.log('[Messages] Realtime subscription status:', status, err || '');
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -78,13 +73,14 @@ export function useMessages() {
   }, []);
 
   const markAsReplied = useCallback(async (id: number, replyText: string) => {
+    // replied_by is set server-side by the send-reply edge function
+    // using the authenticated JWT — never trust client-supplied identity
     const { error } = await supabase
       .from('messages')
       .update({
         status: 'replied',
         reply_text: replyText,
         replied_at: new Date().toISOString(),
-        replied_by: user?.email || null,
       })
       .eq('id', id);
     if (error) {
@@ -92,7 +88,7 @@ export function useMessages() {
       return false;
     }
     return true;
-  }, [user]);
+  }, []);
 
   const archiveMessage = useCallback(async (id: number) => {
     const { error } = await supabase
