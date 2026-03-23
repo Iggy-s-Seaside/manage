@@ -1687,7 +1687,7 @@ export function SpecialEditor() {
               </button>
               <Instagram size={18} className={publishOptions.shareToInstagram ? 'text-pink-400' : 'text-text-muted'} />
               <span className="text-sm text-text-primary">
-                {typeof navigator !== 'undefined' && navigator.share ? 'Share to Instagram' : 'Download for Instagram'}
+                {typeof navigator !== 'undefined' && 'share' in navigator ? 'Share to Instagram' : 'Download for Instagram'}
               </span>
             </label>
           </div>
