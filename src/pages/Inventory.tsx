@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Loader2,
   X,
+  ClipboardList,
 } from 'lucide-react';
 import {
   useInventoryItems,
@@ -17,8 +18,12 @@ import {
   getLowStockItems,
 } from '../hooks/useInventory';
 import { useAuth } from '../context/AuthContext';
+import { useOrderScanner } from '../hooks/useOrderScanner';
 import { QuickAdjust } from '../components/inventory/QuickAdjust';
 import { InventoryLogDrawer } from '../components/inventory/InventoryLogDrawer';
+import { ScanOrderButton } from '../components/inventory/ScanOrderButton';
+import { ScanReviewModal } from '../components/inventory/ScanReviewModal';
+import { OrderHistory } from '../components/inventory/OrderHistory';
 import type { InventoryItem, InventoryCategory } from '../types';
 import { INVENTORY_UNITS } from '../types';
 
@@ -211,6 +216,9 @@ export function Inventory() {
     itemId: null,
     itemName: '',
   });
+  const [scanModalOpen, setScanModalOpen] = useState(false);
+  const [orderHistoryOpen, setOrderHistoryOpen] = useState(false);
+  const scanner = useOrderScanner(items);
 
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.sort_order - b.sort_order),
@@ -289,6 +297,21 @@ export function Inventory() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <ScanOrderButton
+            onFileSelected={(file) => {
+              setScanModalOpen(true);
+              scanner.startScan(file);
+            }}
+            disabled={scanner.state !== 'idle' && scanner.state !== 'done'}
+          />
+          <button
+            onClick={() => setOrderHistoryOpen(true)}
+            className="btn-secondary flex items-center gap-2"
+            title="Order History"
+          >
+            <ClipboardList size={18} />
+            <span className="hidden sm:inline">Orders</span>
+          </button>
           <button
             onClick={() => { setEditing(null); setFormOpen(true); }}
             className="btn-primary flex items-center gap-2 shrink-0"
@@ -490,6 +513,40 @@ export function Inventory() {
         onClose={() => setLogDrawer({ open: false, itemId: null, itemName: '' })}
         itemId={logDrawer.itemId}
         itemName={logDrawer.itemName}
+      />
+
+      {/* Scan Order Review Modal */}
+      <ScanReviewModal
+        open={scanModalOpen}
+        onClose={() => {
+          setScanModalOpen(false);
+          if (scanner.state === 'done') {
+            scanner.reset();
+            refresh();
+          }
+        }}
+        state={scanner.state}
+        supplier={scanner.result?.supplier ?? null}
+        orderNumber={scanner.result?.orderNumber ?? null}
+        items={scanner.result?.items ?? []}
+        imageUrl={scanner.result?.imageUrl}
+        error={scanner.error}
+        onUpdateItem={scanner.updateItem}
+        onUpdateSupplier={scanner.updateSupplier}
+        onConfirm={async () => {
+          const ok = await scanner.confirmOrder();
+          if (ok) await refresh();
+        }}
+        onRetry={() => {
+          scanner.reset();
+          setScanModalOpen(false);
+        }}
+      />
+
+      {/* Order History Drawer */}
+      <OrderHistory
+        open={orderHistoryOpen}
+        onClose={() => setOrderHistoryOpen(false)}
       />
     </div>
   );

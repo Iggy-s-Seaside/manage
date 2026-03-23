@@ -382,7 +382,7 @@ export interface InventoryLog {
 }
 
 export const INVENTORY_UNITS = ['units', 'bottles', 'cases', 'lbs', 'oz', 'kegs', 'bags', 'cans'] as const;
-export const LOG_REASONS = ['restock', 'usage', 'waste', 'count_adjustment'] as const;
+export const LOG_REASONS = ['restock', 'usage', 'waste', 'count_adjustment', 'order_scan'] as const;
 
 // ── Messages / Inbox ──
 
@@ -402,3 +402,28 @@ export interface Message {
 }
 
 export const MESSAGE_STATUSES = ['unread', 'read', 'replied', 'archived'] as const;
+
+// ── Order Scanner ──
+
+export interface ScannedLineItem {
+  description: string;
+  quantity: number;
+  size: string;
+  sku?: string;
+  matched_item_id?: number;
+  match_confidence?: number;
+  proposed_name?: string;
+  status: 'matched' | 'new' | 'skipped' | 'unreadable';
+}
+
+export interface Order {
+  id: number;
+  created_at: string;
+  supplier: string | null;
+  order_number: string | null;
+  image_url: string;
+  items: ScannedLineItem[];
+  notes: string | null;
+  scanned_by: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+}
